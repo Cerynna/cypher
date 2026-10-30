@@ -14,6 +14,7 @@
 - [x] Sécurité : CSP stricte, confirmation des collages multi-lignes, titres OSC filtrés
 - [x] Police Kode Mono embarquée, 16 px par défaut
 - [x] Thème néon cyberpunk, prompt zsh assorti
+- [x] Icône de l'application (`src-tauri/app-icon.svg` → `yarn tauri icon`) et entrée `.desktop` pour WSLg (`scripts/install-desktop-entry.sh`)
 - [x] Barre de titre maison : déplacement, double-clic, réduire/agrandir/fermer, redimensionnement par les bords — *à valider sous WSLg*
 
 ## Lot 2 — Attendu aujourd'hui

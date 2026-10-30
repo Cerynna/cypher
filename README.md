@@ -9,6 +9,14 @@ yarn test                      # tests TypeScript
 cd src-tauri && cargo test     # tests Rust
 ```
 
+### Icône et menu Démarrer sous WSLg
+
+Sous Wayland, WSLg retrouve l'icône d'une fenêtre via un fichier `.desktop` portant son `app_id` (`cypher`), et ne lit que `/usr/share/applications` (pas `~/.local/share/applications`). Pour l'installer, ainsi qu'une entrée « CYPHER » dans le menu Démarrer de Windows (demande `sudo`) :
+
+```sh
+./scripts/install-desktop-entry.sh
+```
+
 ## Raccourcis
 
 | Action | Raccourci |
