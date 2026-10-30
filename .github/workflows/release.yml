@@ -4,29 +4,40 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      plateforme:
+        description: Plateforme à construire
+        type: choice
+        default: all
+        options: [all, windows, linux, macos]
 
 permissions:
   contents: write
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - id: select
+        env:
+          PLATEFORME: ${{ inputs.plateforme || 'all' }}
+        run: |
+          targets='[
+            {"key": "windows", "name": "Windows (.exe)", "platform": "windows-latest", "args": "--bundles nsis", "rust-targets": ""},
+            {"key": "linux", "name": "Linux (.deb)", "platform": "ubuntu-22.04", "args": "--bundles deb", "rust-targets": ""},
+            {"key": "macos", "name": "macOS (.dmg)", "platform": "macos-latest", "args": "--bundles dmg --target universal-apple-darwin", "rust-targets": "aarch64-apple-darwin,x86_64-apple-darwin"}
+          ]'
+          selected=$(jq -c --arg p "$PLATEFORME" 'map(select($p == "all" or .key == $p))' <<<"$targets")
+          echo "matrix={\"include\":$selected}" >> "$GITHUB_OUTPUT"
+
   build:
     name: ${{ matrix.name }}
+    needs: plan
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: Windows (.exe)
-            platform: windows-latest
-            args: --bundles nsis
-            rust-targets: ""
-          - name: Linux (.deb)
-            platform: ubuntu-22.04
-            args: --bundles deb
-            rust-targets: ""
-          - name: macOS (.dmg)
-            platform: macos-latest
-            args: --bundles dmg --target universal-apple-darwin
-            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 45
     steps:

@@ -18,7 +18,7 @@ yarn version --new-version 0.2.0   # commit « chore: release v0.2.0 » + tag v0
 git push --follow-tags
 ```
 
-Le tag déclenche `.github/workflows/release.yml`, qui construit en parallèle `.exe` (Windows, NSIS), `.deb` (Linux) et `.dmg` (macOS universel), puis les joint à une release GitHub **en brouillon** à publier après vérification. Les installeurs ne sont pas signés. Le workflow peut aussi être lancé à la main (« Run workflow ») pour récupérer les installeurs en artefacts sans créer de release.
+Le tag déclenche `.github/workflows/release.yml`, qui construit en parallèle `.exe` (Windows, NSIS), `.deb` (Linux) et `.dmg` (macOS universel), puis les joint à une release GitHub **en brouillon** à publier après vérification. Les installeurs ne sont pas signés. Le workflow peut aussi être lancé à la main (« Run workflow ») pour récupérer les installeurs en artefacts sans créer de release, en choisissant la plateforme (`all`, `windows`, `linux`, `macos`) : `gh workflow run release.yml -f plateforme=windows`.
 
 ### Icône et menu Démarrer sous WSLg
 
