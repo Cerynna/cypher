@@ -34,6 +34,7 @@ Sous Wayland, WSLg retrouve l'icône d'une fenêtre via un fichier `.desktop` po
 |---|---|
 | Palette de commandes | Ctrl+Shift+P |
 | Réglages | Ctrl+, |
+| Plein écran | F11 |
 | Nouvel onglet / fermer le panneau | Ctrl+Shift+T / Ctrl+Shift+W |
 | Onglet suivant / précédent | Ctrl+Tab / Ctrl+Shift+Tab |
 | Renommer l'onglet | Ctrl+Shift+R, double-clic ou clic droit |

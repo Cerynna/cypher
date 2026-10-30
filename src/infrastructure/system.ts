@@ -113,6 +113,11 @@ export async function bindQuakeShortcut(enabled: boolean, shortcut: string): Pro
   });
 }
 
+export async function toggleFullscreen(): Promise<void> {
+  const appWindow = getCurrentWindow();
+  await appWindow.setFullscreen(!(await appWindow.isFullscreen()));
+}
+
 export function setWindowTitle(title: string): Promise<void> {
   return getCurrentWindow().setTitle(title);
 }

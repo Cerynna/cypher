@@ -35,6 +35,7 @@ import {
   platformName,
   runBackground,
   setWindowTitle,
+  toggleFullscreen,
 } from "./infrastructure/system";
 import { openAiCommand, openAiExplanation } from "./ui/ai-panel";
 import { openResumeList } from "./ui/claude-resume";
@@ -375,6 +376,7 @@ const actions: Readonly<Record<ActionId, () => void>> = {
       onClose: refocus,
     }),
   openConfigFile: () => void openConfigFile().catch(reportError),
+  toggleFullscreen: () => void toggleFullscreen().catch(reportError),
   aiCommand: askForCommand,
   aiExplain: explainLastFailure,
   newQuickCommand: createQuickCommand,

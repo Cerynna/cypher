@@ -40,6 +40,7 @@ describe("Keymap", () => {
     [{ key: "Tab", ctrlKey: true, shiftKey: true }, "previousTab"],
     [{ key: "P", ctrlKey: true, shiftKey: true }, "commandPalette"],
     [{ key: ",", ctrlKey: true }, "settings"],
+    [{ key: "F11" }, "toggleFullscreen"],
   ] as const)("%o → %s", (overrides, action) => {
     expect(keymap.resolve(stroke(overrides))).toBe(action);
   });

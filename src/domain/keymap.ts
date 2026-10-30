@@ -73,6 +73,7 @@ export const DEFAULT_BINDINGS: Readonly<Record<string, ActionId>> = {
   "ctrl+shift+o": "copyLastOutput",
   "ctrl+shift+p": "commandPalette",
   "meta+shift+p": "commandPalette",
+  "f11": "toggleFullscreen",
   "ctrl+comma": "settings",
   "meta+comma": "settings",
   "ctrl+shift+a": "aiCommand",

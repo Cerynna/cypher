@@ -22,6 +22,7 @@ export const ACTION_LABELS = {
   copyLastOutput: "Copier la sortie de la dernière commande",
   commandPalette: "Palette de commandes",
   settings: "Réglages",
+  toggleFullscreen: "Plein écran",
   openConfigFile: "Ouvrir config.toml dans l'éditeur",
   newQuickCommand: "Créer une commande rapide",
   resumeClaude: "Reprendre une session Claude…",
