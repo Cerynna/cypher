@@ -33,6 +33,7 @@
 - [x] Commandes rapides en un clic (`[[commands]]`) : bouton emoji dans le dock, création via « + », édition dans les réglages, accès depuis la palette
 - [x] Modes des commandes rapides : terminal actif, taper sans exécuter, nouvel onglet, arrière-plan (sans terminal, résultat en notification) ; notification optionnelle en mode terminal
 - [x] Police Noto Color Emoji embarquée (WSL n'en fournit pas)
+- [x] Sélecteur d'emoji pour les commandes rapides : ~165 emojis par catégorie, recherche FR/EN sans accents, emoji collé accepté, navigation clavier
 - [x] Notification dans l'app avec « Voir la sortie » (sortie complète, copiable) ; tooltips maison sur les boutons
 - [x] Boutons diviser / réglages dans le bandeau, ✕ sur chaque panneau d'un onglet divisé
 - [x] Onglets renommables (double-clic, clic droit, Ctrl+Shift+R) et colorables (clic droit), conservés dans la session

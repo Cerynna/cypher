@@ -31,6 +31,12 @@ export function isQuickCommandMode(value: string): value is QuickCommandMode {
   return (QUICK_COMMAND_MODES as readonly string[]).includes(value);
 }
 
+const EMOJI_PRESENTATION_SELECTOR = /\uFE0F(?!\u20E3)/g;
+
+export function withoutPresentationSelector(emoji: string): string {
+  return emoji.replace(EMOJI_PRESENTATION_SELECTOR, "");
+}
+
 export function firstGrapheme(text: string): string | undefined {
   const [first] = new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text.trim());
   return first?.segment;
@@ -47,7 +53,7 @@ export function createQuickCommand(fields: {
   const command = fields.command.trim();
   if (name === "" || command === "") return undefined;
   return {
-    emoji: firstGrapheme(fields.emoji ?? "") ?? DEFAULT_EMOJI,
+    emoji: withoutPresentationSelector(firstGrapheme(fields.emoji ?? "") ?? DEFAULT_EMOJI),
     name,
     command,
     mode: fields.mode ?? "run",

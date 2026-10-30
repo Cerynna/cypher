@@ -941,8 +941,111 @@ legend {
   border-color: color-mix(in srgb, var(--danger) 40%, transparent);
 }
 
-.quick-command-fields__emoji {
-  font-size: 18px;
+.emoji-picker {
+  position: relative;
+  justify-self: start;
+}
+
+.emoji-picker__trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 36px;
+  border: 1px solid color-mix(in srgb, var(--highlight) 55%, transparent);
+  background: var(--bg);
+  font: 20px/1 "Noto Color Emoji", var(--hud-font);
+  cursor: pointer;
+}
+
+.overlay__body .emoji-picker__trigger {
+  padding: 0;
+}
+
+.emoji-picker__trigger:hover,
+.emoji-picker__trigger:focus-visible,
+.emoji-picker__trigger[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--highlight);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--highlight) 45%, transparent);
+}
+
+.emoji-picker__popover {
+  position: fixed;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 340px;
+  padding: 10px;
+  border: 1px solid var(--highlight);
+  background: var(--surface);
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--highlight) 30%, transparent),
+    0 12px 28px #0009;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.emoji-picker__popover[hidden] {
+  display: none;
+}
+
+.emoji-picker__search {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px var(--hud-font);
+  outline: none;
+  caret-color: var(--accent-alt);
+}
+
+.emoji-picker__search:focus {
+  border-color: var(--highlight);
+}
+
+.emoji-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.emoji-picker__category,
+.emoji-picker__empty {
+  grid-column: 1 / -1;
+  margin: 6px 0 2px;
+  color: var(--highlight);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.emoji-picker__empty {
+  color: var(--muted);
+  letter-spacing: normal;
+  text-transform: none;
+  font-size: 12px;
+}
+
+.emoji-picker__emoji {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  font: 20px/1 "Noto Color Emoji", var(--hud-font);
+  cursor: pointer;
+}
+
+.emoji-picker__emoji:hover,
+.emoji-picker__emoji:focus-visible {
+  outline: none;
+  border-color: var(--highlight);
+  background: color-mix(in srgb, var(--highlight) 15%, transparent);
 }
 
 .overlay__body .quick-command-fields__command {

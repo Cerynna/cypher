@@ -5,6 +5,7 @@ import {
   QUICK_COMMAND_MODES,
   type QuickCommand,
 } from "../domain/quick-commands";
+import { createEmojiPicker } from "./emoji-picker";
 import { openOverlay } from "./overlay";
 
 export type QuickCommandFields = {
@@ -12,8 +13,8 @@ export type QuickCommandFields = {
   readonly read: () => QuickCommand | undefined;
 };
 
-function labelled(text: string, input: HTMLElement, kind: "text" | "toggle" | "select"): HTMLLabelElement {
-  const row = document.createElement("label");
+function labelled(text: string, input: HTMLElement, kind: "text" | "toggle" | "select"): HTMLElement {
+  const row = document.createElement(input instanceof HTMLInputElement || input instanceof HTMLSelectElement ? "label" : "div");
   row.className = `settings__row settings__row--${kind}`;
   const name = document.createElement("span");
   name.textContent = text;
@@ -39,8 +40,7 @@ function modeSelect(initial: QuickCommand["mode"]): HTMLSelectElement {
 }
 
 export function quickCommandFields(initial: QuickCommand | undefined): QuickCommandFields {
-  const emoji = textInput(initial?.emoji ?? "", "🚀");
-  emoji.className = "quick-command-fields__emoji";
+  const emoji = createEmojiPicker(initial?.emoji);
   const name = textInput(initial?.name ?? "", "ex. Login AWS (affiché au survol)");
   const command = textInput(initial?.command ?? "", "ex. aws sso login --profile dev");
   command.className = "quick-command-fields__command";
@@ -60,7 +60,7 @@ export function quickCommandFields(initial: QuickCommand | undefined): QuickComm
   const element = document.createElement("div");
   element.className = "quick-command-fields";
   element.append(
-    labelled("Emoji du bouton", emoji, "text"),
+    labelled("Emoji du bouton", emoji.element, "text"),
     labelled("Commande à exécuter", command, "text"),
     labelled("Nom (infobulle)", name, "text"),
     labelled("Lancer dans", mode, "select"),
@@ -70,7 +70,7 @@ export function quickCommandFields(initial: QuickCommand | undefined): QuickComm
     element,
     read: () =>
       createQuickCommand({
-        emoji: emoji.value,
+        emoji: emoji.value(),
         name: name.value,
         command: command.value,
         mode: isQuickCommandMode(mode.value) ? mode.value : "run",

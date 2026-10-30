@@ -36,6 +36,11 @@ describe("commandes rapides", () => {
     expect(createQuickCommand({ emoji: "🐳🐳", name: "Docker", command: "docker.exe ps" })?.emoji).toBe("🐳");
   });
 
+  it("garde le sélecteur de présentation seulement pour les touches", () => {
+    expect(createQuickCommand({ emoji: "🛠️", name: "Fix", command: "make fix" })?.emoji).toBe("🛠");
+    expect(createQuickCommand({ emoji: "1️⃣", name: "Un", command: "echo 1" })?.emoji).toBe("1️⃣");
+  });
+
   it("notifie toujours en arrière-plan", () => {
     expect(createQuickCommand({ name: "Sync", command: "git fetch", mode: "background" })?.notify).toBe(true);
   });
