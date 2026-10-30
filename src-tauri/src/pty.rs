@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::Mutex;
@@ -11,6 +11,7 @@ use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager, State};
 
 use crate::executable::{file_stem, find_in_path};
+use crate::input_queue::InputQueue;
 use crate::registry::{Registry, SessionId};
 
 const READ_BUFFER_SIZE: usize = 8192;
@@ -19,7 +20,7 @@ const FALLBACK_SHELLS: [&str; 2] = ["pwsh", "powershell"];
 
 struct PtySession {
     master: Box<dyn MasterPty + Send>,
-    writer: Box<dyn Write + Send>,
+    input: InputQueue,
     killer: Box<dyn ChildKiller + Send + Sync>,
 }
 
@@ -178,7 +179,7 @@ pub fn pty_spawn(
 
     let session = PtySession {
         master: pair.master,
-        writer,
+        input: InputQueue::spawn(writer),
         killer,
     };
     Ok(state.0.lock().map_err(|e| e.to_string())?.insert(session))
@@ -198,12 +199,7 @@ fn with_session<T>(
 
 #[tauri::command]
 pub fn pty_write(state: State<PtyState>, id: SessionId, data: String) -> Result<(), String> {
-    with_session(&state, id, |session| {
-        session
-            .writer
-            .write_all(data.as_bytes())
-            .map_err(|e| e.to_string())
-    })
+    with_session(&state, id, |session| session.input.push(data.into_bytes()))
 }
 
 #[tauri::command]

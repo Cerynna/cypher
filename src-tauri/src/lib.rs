@@ -4,6 +4,7 @@ mod claude;
 mod config;
 mod editor;
 mod executable;
+mod input_queue;
 mod pty;
 mod registry;
 
