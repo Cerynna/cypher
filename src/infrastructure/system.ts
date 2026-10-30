@@ -35,6 +35,24 @@ export function cancelBackground(id: string): Promise<void> {
   return invoke("cancel_background", { id });
 }
 
+const repoRoots = new Map<string, Promise<string | undefined>>();
+
+export function repoRootOf(cwd: string): Promise<string | undefined> {
+  const cached = repoRoots.get(cwd);
+  if (cached) return cached;
+  const lookup = invoke<string | null>("repo_root", { cwd })
+    .then((root) => {
+      if (root === null) repoRoots.delete(cwd);
+      return root ?? undefined;
+    })
+    .catch(() => {
+      repoRoots.delete(cwd);
+      return undefined;
+    });
+  repoRoots.set(cwd, lookup);
+  return lookup;
+}
+
 export function claudeSessions(cwd: string, limit: number): Promise<readonly ClaudeSession[]> {
   return invoke("claude_sessions", { cwd, limit });
 }

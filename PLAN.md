@@ -43,7 +43,7 @@
 - [x] Intégration shell dans le `.zshrc` de CYPHER : OSC 133 (A/B/C/D, commande en base64) et OSC 7
 - [x] Blocs de commande : statut et durée à droite du prompt, liseré rouge sur les échecs, repères dans la barre de défilement
 - [x] Navigation entre commandes (Ctrl+Shift+↑/↓), copie de la dernière sortie (Ctrl+Shift+O)
-- [x] Dossier courant hérité par les nouveaux onglets/splits, affiché dans l'onglet et le titre
+- [x] Dossier courant hérité par les nouveaux onglets/splits ; l'onglet affiche le nom du dépôt git (sinon le dossier)
 - [x] Notification système quand une commande longue (10 s par défaut) se termine hors focus
 - [x] Restauration des onglets, splits et dossiers au redémarrage (les shells sont relancés, pas leur contenu)
 - [x] Sessions Claude : celles qui tournaient à la fermeture sont proposées à la reprise au démarrage (`claude --resume <id>` dans leur panneau) ; « Reprendre une session Claude… » liste les sessions récentes du dossier

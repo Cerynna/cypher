@@ -14,8 +14,9 @@ import type { Keymap } from "../domain/keymap";
 import { FlowControl } from "../domain/flow-control";
 import { findFileLinks } from "../domain/links";
 import type { PaneId } from "../domain/pane-tree";
-import { directoryName, parseSemanticPrompt, parseWorkingDirectory, type ShellEvent } from "../domain/shell-integration";
-import { existingPaths } from "../infrastructure/system";
+import { paneTitle } from "../domain/pane-title";
+import { parseSemanticPrompt, parseWorkingDirectory, type ShellEvent } from "../domain/shell-integration";
+import { existingPaths, repoRootOf } from "../infrastructure/system";
 import { Pty, type ShellOverride } from "../infrastructure/tauri-pty";
 import { copyText, TerminalClipboard } from "./clipboard";
 
@@ -60,6 +61,7 @@ function lineText(terminal: XTerm, from: number, to: number): string {
 export class TerminalPane implements Pane, CommandPane {
   private history = CommandHistory.empty<IMarker>();
   private cwdValue: string | undefined;
+  private repoRoot: string | undefined;
   private shellTitle = "";
   private pty: Pty | undefined;
   private pendingInput = "";
@@ -108,6 +110,7 @@ export class TerminalPane implements Pane, CommandPane {
     const clipboard = TerminalClipboard.attach(terminal, element);
     const pane = new TerminalPane(request.id, element, terminal, fitAddon, search, clipboard, events, services);
     pane.cwdValue = request.cwd;
+    if (request.cwd) void pane.refreshRepoRoot(request.cwd);
     return pane;
   }
 
@@ -122,10 +125,12 @@ export class TerminalPane implements Pane, CommandPane {
   }
 
   get title(): string {
-    const running = this.history.current;
-    if (running?.startedAt !== undefined && running.finishedAt === undefined && running.command) return running.command;
-    if (this.cwdValue) return directoryName(this.cwdValue);
-    return this.shellTitle || "shell";
+    return paneTitle({
+      runningCommand: this.runningCommand?.command,
+      repoRoot: this.repoRoot,
+      cwd: this.cwdValue,
+      shellTitle: this.shellTitle,
+    });
   }
 
   get lastFailed(): CommandBlock<IMarker> | undefined {
@@ -234,6 +239,13 @@ export class TerminalPane implements Pane, CommandPane {
     }
   }
 
+  private async refreshRepoRoot(cwd: string): Promise<void> {
+    const root = await repoRootOf(cwd);
+    if (this.cwdValue !== cwd || root === this.repoRoot) return;
+    this.repoRoot = root;
+    this.events.onChange();
+  }
+
   private writeOutput(data: Uint8Array): void {
     if (this.flow.received(data.length) === "pause") void this.pty?.setPaused(true);
     this.terminal.write(data, () => {
@@ -278,6 +290,7 @@ export class TerminalPane implements Pane, CommandPane {
         if (cwd && cwd !== this.cwdValue) {
           this.cwdValue = cwd;
           this.events.onChange();
+          void this.refreshRepoRoot(cwd);
         }
         return true;
       }),

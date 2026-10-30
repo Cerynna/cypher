@@ -8,6 +8,7 @@ mod input_queue;
 mod pty;
 mod read_gate;
 mod registry;
+mod repo;
 
 use std::sync::Arc;
 
@@ -41,7 +42,8 @@ pub fn run() {
             ai::ai_ask,
             background::run_background,
             background::cancel_background,
-            claude::claude_sessions
+            claude::claude_sessions,
+            repo::repo_root
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
