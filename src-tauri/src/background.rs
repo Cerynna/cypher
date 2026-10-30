@@ -99,7 +99,10 @@ fn terminate_tree(pid: u32) {
     let _ = killer.stdout(Stdio::null()).stderr(Stdio::null()).status();
 }
 
-fn collect(stream: Option<impl Read + Send + 'static>, buffer: Arc<Mutex<TailBuffer>>) -> Option<thread::JoinHandle<()>> {
+fn collect(
+    stream: Option<impl Read + Send + 'static>,
+    buffer: Arc<Mutex<TailBuffer>>,
+) -> Option<thread::JoinHandle<()>> {
     let mut stream = stream?;
     Some(thread::spawn(move || {
         let mut chunk = [0u8; 8192];
@@ -132,7 +135,12 @@ fn wait_with_output(mut child: Child) -> std::io::Result<(Option<i32>, String)> 
     Ok((status.code(), output))
 }
 
-fn execute(state: &BackgroundState, id: &str, command: &str, cwd: Option<&str>) -> Result<BackgroundResult, String> {
+fn execute(
+    state: &BackgroundState,
+    id: &str,
+    command: &str,
+    cwd: Option<&str>,
+) -> Result<BackgroundResult, String> {
     let mut invocation = shell_invocation(command);
     if let Some(dir) = cwd.map(Path::new).filter(|dir| dir.is_dir()) {
         invocation.current_dir(dir);
@@ -179,7 +187,13 @@ mod tests {
     #[test]
     fn renvoie_le_code_de_sortie_et_la_sortie_combinee() {
         let state = BackgroundState::default();
-        let result = execute(&state, "a", "echo bonjour; sleep 0.05; echo oups >&2; exit 3", None).unwrap();
+        let result = execute(
+            &state,
+            "a",
+            "echo bonjour; sleep 0.05; echo oups >&2; exit 3",
+            None,
+        )
+        .unwrap();
         assert_eq!(result.exit_code, Some(3));
         assert_eq!(result.output, "bonjour\noups\n");
         assert!(!result.cancelled);
@@ -195,7 +209,13 @@ mod tests {
 
     #[test]
     fn ne_garde_que_la_fin_d_une_sortie_volumineuse() {
-        let result = execute(&BackgroundState::default(), "c", "yes abcdefgh | head -c 1000000; echo FIN", None).unwrap();
+        let result = execute(
+            &BackgroundState::default(),
+            "c",
+            "yes abcdefgh | head -c 1000000; echo FIN",
+            None,
+        )
+        .unwrap();
         assert!(result.output.len() <= MAX_OUTPUT_BYTES);
         assert!(result.output.ends_with("FIN\n"));
     }

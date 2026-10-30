@@ -51,10 +51,10 @@ pub fn config_write(app: AppHandle, content: String) -> Result<(), String> {
 
 fn concerns_config(event: &notify::Event) -> bool {
     !matches!(event.kind, EventKind::Access(_))
-        && event
-            .paths
-            .iter()
-            .any(|path| path.file_name().is_some_and(|name| name == CONFIG_FILE_NAME))
+        && event.paths.iter().any(|path| {
+            path.file_name()
+                .is_some_and(|name| name == CONFIG_FILE_NAME)
+        })
 }
 
 pub fn watch(app: &AppHandle) -> Result<ConfigWatcher, String> {

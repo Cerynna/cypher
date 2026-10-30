@@ -73,7 +73,10 @@ pub fn list_sessions(project_dir: &Path, limit: usize) -> Vec<ClaudeSession> {
     let mut sessions: Vec<ClaudeSession> = entries
         .filter_map(Result::ok)
         .map(|entry| entry.path())
-        .filter(|path| path.extension().is_some_and(|extension| extension == "jsonl"))
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "jsonl")
+        })
         .filter_map(|path| {
             let metadata = fs::metadata(&path).ok()?;
             let modified_ms = millis(metadata.modified())?;
@@ -85,7 +88,7 @@ pub fn list_sessions(project_dir: &Path, limit: usize) -> Vec<ClaudeSession> {
             })
         })
         .collect();
-    sessions.sort_by(|a, b| b.modified_ms.cmp(&a.modified_ms));
+    sessions.sort_by_key(|session| std::cmp::Reverse(session.modified_ms));
     sessions.truncate(limit);
     sessions
 }
@@ -99,8 +102,14 @@ fn claude_home(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-pub async fn claude_sessions(app: AppHandle, cwd: String, limit: usize) -> Result<Vec<ClaudeSession>, String> {
-    let project_dir = claude_home(&app)?.join("projects").join(project_dir_name(&cwd));
+pub async fn claude_sessions(
+    app: AppHandle,
+    cwd: String,
+    limit: usize,
+) -> Result<Vec<ClaudeSession>, String> {
+    let project_dir = claude_home(&app)?
+        .join("projects")
+        .join(project_dir_name(&cwd));
     tauri::async_runtime::spawn_blocking(move || list_sessions(&project_dir, limit))
         .await
         .map_err(|e| e.to_string())
@@ -119,7 +128,10 @@ mod tests {
 
     #[test]
     fn encode_le_dossier_comme_claude_code() {
-        assert_eq!(project_dir_name("/home/jm/Labo/cypher"), "-home-jm-Labo-cypher");
+        assert_eq!(
+            project_dir_name("/home/jm/Labo/cypher"),
+            "-home-jm-Labo-cypher"
+        );
         assert_eq!(project_dir_name("/home/jm/my.app_v2"), "-home-jm-my-app-v2");
     }
 
@@ -140,9 +152,17 @@ mod tests {
     #[test]
     fn liste_les_sessions_de_la_plus_recente_a_la_plus_ancienne() {
         let dir = sandbox("list");
-        fs::write(dir.join("old.jsonl"), r#"{"type":"user","message":{"content":"ancienne"}}"#).unwrap();
+        fs::write(
+            dir.join("old.jsonl"),
+            r#"{"type":"user","message":{"content":"ancienne"}}"#,
+        )
+        .unwrap();
         std::thread::sleep(std::time::Duration::from_millis(20));
-        fs::write(dir.join("new.jsonl"), r#"{"type":"user","message":{"content":"récente"}}"#).unwrap();
+        fs::write(
+            dir.join("new.jsonl"),
+            r#"{"type":"user","message":{"content":"récente"}}"#,
+        )
+        .unwrap();
         fs::write(dir.join("notes.txt"), "ignoré").unwrap();
         let sessions = list_sessions(&dir, 10);
         let ids: Vec<&str> = sessions.iter().map(|session| session.id.as_str()).collect();

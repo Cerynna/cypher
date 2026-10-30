@@ -1,7 +1,7 @@
 use std::env;
 
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 const MESSAGES_URL: &str = "https://api.anthropic.com/v1/messages";
 const API_VERSION: &str = "2026-10-21";
@@ -50,7 +50,9 @@ fn extract_text(response: &Value) -> Result<String, String> {
 }
 
 fn api_error(status: reqwest::StatusCode, body: &Value) -> String {
-    let message = body["error"]["message"].as_str().unwrap_or("erreur inconnue");
+    let message = body["error"]["message"]
+        .as_str()
+        .unwrap_or("erreur inconnue");
     format!("API Claude ({status}) : {message}")
 }
 

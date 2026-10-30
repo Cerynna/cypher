@@ -48,7 +48,8 @@ pub fn run() {
         .run(|app, event| {
             if let RunEvent::Exit = event {
                 app.state::<pty::PtyState>().close_all();
-                app.state::<Arc<background::BackgroundState>>().terminate_all();
+                app.state::<Arc<background::BackgroundState>>()
+                    .terminate_all();
             }
         });
 }

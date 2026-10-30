@@ -22,7 +22,11 @@ pub fn resolve_existing(path: &str, cwd: Option<&Path>, home: Option<&Path>) -> 
 }
 
 #[tauri::command]
-pub fn existing_paths(app: AppHandle, cwd: Option<String>, paths: Vec<String>) -> Vec<Option<String>> {
+pub fn existing_paths(
+    app: AppHandle,
+    cwd: Option<String>,
+    paths: Vec<String>,
+) -> Vec<Option<String>> {
     let home = app.path().home_dir().ok();
     let cwd = cwd.map(PathBuf::from);
     paths

@@ -9,7 +9,11 @@ impl InputQueue {
         let (sender, receiver) = mpsc::channel::<Vec<u8>>();
         thread::spawn(move || {
             while let Ok(bytes) = receiver.recv() {
-                if writer.write_all(&bytes).and_then(|()| writer.flush()).is_err() {
+                if writer
+                    .write_all(&bytes)
+                    .and_then(|()| writer.flush())
+                    .is_err()
+                {
                     break;
                 }
             }
