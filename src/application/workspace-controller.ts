@@ -1,4 +1,4 @@
-import type { Direction, Orientation, PaneId } from "../domain/pane-tree";
+import type { Direction, Orientation, PaneId, SplitPath } from "../domain/pane-tree";
 import { containsPane, paneIds } from "../domain/pane-tree";
 import { type TabColor, type TabId, Workspace } from "../domain/workspace";
 import type {
@@ -121,6 +121,11 @@ export class WorkspaceController<P extends Pane> {
 
   colorTab(tabId: TabId, color: TabColor | undefined): void {
     this.commit(this.workspace.colorTab(tabId, color));
+  }
+
+  resizeSplit(path: SplitPath, ratio: number): void {
+    const tabId = this.workspace.activeTabId;
+    if (tabId !== undefined) this.commit(this.workspace.resizeSplit(tabId, path, ratio));
   }
 
   activateTab(tabId: TabId): void {

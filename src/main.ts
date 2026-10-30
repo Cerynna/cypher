@@ -133,6 +133,7 @@ const view = WorkspaceView.create(requireElement(".dock__tabs"), requireElement(
   onRenameTab: (id, label) => controller.renameTab(id, label),
   onColorTab: (id, color) => controller.colorTab(id, color),
   onTabEditEnd: () => controller.focused?.focus(),
+  onResizeSplit: (path, ratio) => controller.resizeSplit(path, ratio),
   onRendered: (focused) => void setWindowTitle(windowTitle(focused?.title ?? "")),
 });
 

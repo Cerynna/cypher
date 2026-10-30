@@ -20,6 +20,7 @@ cd src-tauri && cargo test     # tests Rust
 | Renommer l'onglet | Ctrl+Shift+R, double-clic ou clic droit |
 | Diviser à droite / en bas | Ctrl+Shift+D / Ctrl+Shift+E |
 | Changer de panneau | Ctrl+Alt+flèches |
+| Redimensionner un split | glisser la séparation · double-clic = 50/50 |
 | Commande précédente / suivante | Ctrl+Shift+↑ / ↓ |
 | Copier la dernière sortie | Ctrl+Shift+O |
 | Copier / coller | Ctrl+Shift+C / Ctrl+Shift+V |

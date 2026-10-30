@@ -20,6 +20,7 @@
 
 - [x] Onglets : registre de sessions PTY côté Rust (`registry.rs`), barre d'onglets dans le bandeau
 - [x] Splits horizontaux / verticaux, navigation clavier par position (`domain/pane-tree.ts`)
+- [x] Redimensionnement des splits à la souris (glisser la séparation, double-clic = 50/50), ratio conservé dans la session
 - [x] Config `~/.config/cypher/config.toml`, validée champ par champ, rechargée à chaud (`notify`)
 - [x] Panneau de réglages (Ctrl+,) qui écrit `config.toml`
 - [x] Thèmes : `neon`, `synthwave`, `matrix`, `abyss`, `sanguine`, `amber`, `ultraviolet`, `sakura`, `ember`, `glacier`, `ghost`, `neon-day` ; contraste vérifié par test ; aperçu en direct dans les réglages ; suivi clair/sombre du système

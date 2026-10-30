@@ -36,6 +36,33 @@ describe("Workspace", () => {
     expect(layoutRects(workspace.activeTab!.root).get("b")).toEqual({ x: 0.5, y: 0, width: 0.5, height: 1 });
   });
 
+  it("redimensionne un split et borne le ratio", () => {
+    const workspace = Workspace.empty().openTab("t1", "a").split("b", "horizontal");
+    const resized = workspace.resizeSplit("t1", [], 0.7);
+    expect(layoutRects(resized.activeTab!.root).get("a")?.width).toBeCloseTo(0.7);
+    expect(layoutRects(resized.activeTab!.root).get("b")).toMatchObject({ x: 0.7 });
+    expect(workspace.resizeSplit("t1", [], 0.99).activeTab!.root).toMatchObject({ ratio: 0.9 });
+    expect(workspace.resizeSplit("t1", [], 0).activeTab!.root).toMatchObject({ ratio: 0.1 });
+  });
+
+  it("redimensionne un split imbriqué via son chemin", () => {
+    const resized = twoByTwo().resizeSplit("t1", ["second"], 0.25);
+    const rects = layoutRects(resized.activeTab!.root);
+    expect(rects.get("b")?.height).toBeCloseTo(0.25);
+    expect(rects.get("d")).toMatchObject({ y: 0.25 });
+    expect(rects.get("c")?.height).toBeCloseTo(0.5);
+  });
+
+  it("garde les ratios voisins quand on ferme un panneau", () => {
+    const workspace = twoByTwo().resizeSplit("t1", [], 0.3).closePane("d");
+    expect(workspace.activeTab!.root).toMatchObject({ ratio: 0.3 });
+  });
+
+  it("navigue selon les tailles réelles après redimensionnement", () => {
+    const workspace = twoByTwo().resizeSplit("t1", ["first"], 0.2).resizeSplit("t1", ["second"], 0.8).focusPane("c");
+    expect(workspace.moveFocus("right").focusedPane).toBe("b");
+  });
+
   it("navigue entre panneaux selon leur position", () => {
     const workspace = twoByTwo().focusPane("a");
     expect(workspace.moveFocus("right").focusedPane).toBe("b");
@@ -83,6 +110,19 @@ describe("Workspace", () => {
     expect(tab).toMatchObject({ label: "logs", color: "green" });
   });
 
+  it("restaure une ancienne session sans ratio en 50/50", () => {
+    const restored = Workspace.restore({
+      tabs: [
+        {
+          id: "t",
+          focusedPane: "a",
+          root: { kind: "split", orientation: "vertical", first: { kind: "pane", id: "a" }, second: { kind: "pane", id: "b" } },
+        },
+      ],
+    });
+    expect(layoutRects(restored!.activeTab!.root).get("b")).toMatchObject({ y: 0.5, height: 0.5 });
+  });
+
   it("se restaure depuis un instantané valide", () => {
     const original = twoByTwo().renameTab("t1", "dev").colorTab("t1", "cyan").openTab("t2", "e");
     const restored = Workspace.restore(JSON.parse(JSON.stringify(original.snapshot())));
@@ -100,6 +140,15 @@ describe("Workspace", () => {
       ],
     },
     { tabs: [{ id: "t", root: { kind: "pane", id: "a" }, focusedPane: "a", color: "chartreuse" }] },
+    {
+      tabs: [
+        {
+          id: "t",
+          focusedPane: "a",
+          root: { kind: "split", orientation: "horizontal", ratio: 2, first: { kind: "pane", id: "a" }, second: { kind: "pane", id: "b" } },
+        },
+      ],
+    },
   ])("refuse un instantané invalide : %j", (snapshot) => {
     expect(Workspace.restore(snapshot)).toBeUndefined();
   });

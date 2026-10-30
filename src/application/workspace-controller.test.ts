@@ -168,6 +168,14 @@ describe("WorkspaceController", () => {
     expect(setup().controller.start()).toEqual([]);
   });
 
+  it("enregistre le ratio d'un split redimensionné", () => {
+    const { controller, sessions } = setup();
+    controller.start();
+    controller.split("horizontal");
+    controller.resizeSplit([], 0.65);
+    expect(sessions.saved?.workspace.tabs[0].root).toMatchObject({ kind: "split", ratio: 0.65 });
+  });
+
   it("ignore une session corrompue", () => {
     const { controller, created } = setup({ workspace: { tabs: "nope" } });
     controller.start();

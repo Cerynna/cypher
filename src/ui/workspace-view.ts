@@ -1,5 +1,13 @@
 import type { WorkspaceRenderer } from "../application/ports";
-import type { PaneId, PaneNode } from "../domain/pane-tree";
+import {
+  clampRatio,
+  DEFAULT_RATIO,
+  type PaneId,
+  type PaneNode,
+  type SplitNode,
+  type SplitPath,
+  splitRatio,
+} from "../domain/pane-tree";
 import type { TabColor, TabId, Workspace } from "../domain/workspace";
 import { openTabMenu } from "./tab-menu";
 import type { TerminalPane } from "./terminal-pane";
@@ -12,6 +20,7 @@ export type WorkspaceViewCallbacks = {
   readonly onRenameTab: (id: TabId, label: string) => void;
   readonly onColorTab: (id: TabId, color: TabColor | undefined) => void;
   readonly onTabEditEnd: () => void;
+  readonly onResizeSplit: (path: SplitPath, ratio: number) => void;
   readonly onRendered: (focused: TerminalPane | undefined) => void;
 };
 
@@ -41,7 +50,7 @@ export class WorkspaceView implements WorkspaceRenderer<TerminalPane> {
     const active = workspace.activeTab;
     if (!active) return this.panesHost.replaceChildren();
     const showFocus = active.root.kind === "split";
-    this.panesHost.replaceChildren(this.renderNode(active.root, panes, active.focusedPane, showFocus));
+    this.panesHost.replaceChildren(this.renderNode(active.root, [], panes, active.focusedPane, showFocus));
     for (const pane of panes.values()) {
       if (!pane.element.isConnected) continue;
       pane.mount();
@@ -143,6 +152,7 @@ export class WorkspaceView implements WorkspaceRenderer<TerminalPane> {
 
   private renderNode(
     node: PaneNode,
+    path: SplitPath,
     panes: ReadonlyMap<PaneId, TerminalPane>,
     focused: PaneId,
     showFocus: boolean,
@@ -156,10 +166,54 @@ export class WorkspaceView implements WorkspaceRenderer<TerminalPane> {
       return host;
     }
     const split = element("div", `split split--${node.orientation}`);
-    split.append(
-      this.renderNode(node.first, panes, focused, showFocus),
-      this.renderNode(node.second, panes, focused, showFocus),
-    );
+    const first = this.renderNode(node.first, [...path, "first"], panes, focused, showFocus);
+    const second = this.renderNode(node.second, [...path, "second"], panes, focused, showFocus);
+    applyRatio(first, second, splitRatio(node));
+    split.append(first, this.divider(node, path, split, first, second), second);
     return split;
   }
+
+  private divider(
+    node: SplitNode,
+    path: SplitPath,
+    split: HTMLElement,
+    first: HTMLElement,
+    second: HTMLElement,
+  ): HTMLElement {
+    const divider = element("div", `split__divider split__divider--${node.orientation}`);
+    divider.setAttribute("role", "separator");
+    divider.setAttribute("aria-orientation", node.orientation === "horizontal" ? "vertical" : "horizontal");
+    divider.title = "Glisser pour redimensionner · double-clic pour 50/50";
+    let ratio = splitRatio(node);
+
+    divider.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      divider.setPointerCapture(event.pointerId);
+      split.classList.add("split--resizing");
+    });
+    divider.addEventListener("pointermove", (event) => {
+      if (!divider.hasPointerCapture(event.pointerId)) return;
+      const box = split.getBoundingClientRect();
+      const position =
+        node.orientation === "horizontal" ? (event.clientX - box.left) / box.width : (event.clientY - box.top) / box.height;
+      ratio = clampRatio(position);
+      applyRatio(first, second, ratio);
+    });
+    const release = (event: PointerEvent) => {
+      if (!divider.hasPointerCapture(event.pointerId)) return;
+      divider.releasePointerCapture(event.pointerId);
+      split.classList.remove("split--resizing");
+      this.callbacks.onResizeSplit(path, ratio);
+    };
+    divider.addEventListener("pointerup", release);
+    divider.addEventListener("pointercancel", release);
+    divider.addEventListener("dblclick", () => this.callbacks.onResizeSplit(path, DEFAULT_RATIO));
+    return divider;
+  }
+}
+
+function applyRatio(first: HTMLElement, second: HTMLElement, ratio: number): void {
+  first.style.flex = `${ratio} 1 0`;
+  second.style.flex = `${1 - ratio} 1 0`;
 }

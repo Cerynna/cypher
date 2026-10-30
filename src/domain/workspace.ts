@@ -9,6 +9,8 @@ import {
   neighbour,
   paneIds,
   removePane,
+  resizeSplit,
+  type SplitPath,
   splitPane,
 } from "./pane-tree";
 
@@ -124,6 +126,10 @@ export class Workspace {
       const { color: _previous, ...rest } = tab;
       return color === undefined ? rest : { ...rest, color };
     });
+  }
+
+  resizeSplit(tabId: TabId, path: SplitPath, ratio: number): Workspace {
+    return this.updateTab(tabId, (tab) => ({ ...tab, root: resizeSplit(tab.root, path, ratio) }));
   }
 
   split(newPane: PaneId, orientation: Orientation): Workspace {

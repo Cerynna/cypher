@@ -9,7 +9,24 @@ export type PaneNode =
       readonly orientation: Orientation;
       readonly first: PaneNode;
       readonly second: PaneNode;
+      readonly ratio?: number;
     };
+
+export type SplitNode = Extract<PaneNode, { kind: "split" }>;
+
+export type SplitPath = readonly ("first" | "second")[];
+
+export const DEFAULT_RATIO = 0.5;
+export const MIN_RATIO = 0.1;
+export const MAX_RATIO = 0.9;
+
+export function splitRatio(node: SplitNode): number {
+  return node.ratio ?? DEFAULT_RATIO;
+}
+
+export function clampRatio(ratio: number): number {
+  return Math.min(MAX_RATIO, Math.max(MIN_RATIO, ratio));
+}
 
 export type Rect = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 
@@ -49,17 +66,25 @@ export function removePane(node: PaneNode, target: PaneId): PaneNode | undefined
   return { ...node, first, second };
 }
 
+export function resizeSplit(node: PaneNode, path: SplitPath, ratio: number): PaneNode {
+  if (node.kind === "pane") return node;
+  if (path.length === 0) return { ...node, ratio: clampRatio(ratio) };
+  const [branch, ...rest] = path;
+  return { ...node, [branch]: resizeSplit(node[branch], rest, ratio) };
+}
+
 export function layoutRects(node: PaneNode, rect: Rect = UNIT_RECT): ReadonlyMap<PaneId, Rect> {
   if (node.kind === "pane") return new Map([[node.id, rect]]);
+  const ratio = splitRatio(node);
   const [firstRect, secondRect] =
     node.orientation === "horizontal"
       ? [
-          { ...rect, width: rect.width / 2 },
-          { ...rect, x: rect.x + rect.width / 2, width: rect.width / 2 },
+          { ...rect, width: rect.width * ratio },
+          { ...rect, x: rect.x + rect.width * ratio, width: rect.width * (1 - ratio) },
         ]
       : [
-          { ...rect, height: rect.height / 2 },
-          { ...rect, y: rect.y + rect.height / 2, height: rect.height / 2 },
+          { ...rect, height: rect.height * ratio },
+          { ...rect, y: rect.y + rect.height * ratio, height: rect.height * (1 - ratio) },
         ];
   return new Map([...layoutRects(node.first, firstRect), ...layoutRects(node.second, secondRect)]);
 }
@@ -105,6 +130,8 @@ export function isPaneNode(value: unknown): value is PaneNode {
   return (
     node.kind === "split" &&
     (node.orientation === "horizontal" || node.orientation === "vertical") &&
+    (node.ratio === undefined ||
+      (typeof node.ratio === "number" && node.ratio >= MIN_RATIO && node.ratio <= MAX_RATIO)) &&
     isPaneNode(node.first) &&
     isPaneNode(node.second)
   );
