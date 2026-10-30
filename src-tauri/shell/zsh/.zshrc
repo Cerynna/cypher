@@ -1,3 +1,5 @@
+typeset -U path PATH
+
 CYPHER_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/cypher"
 mkdir -p "$CYPHER_STATE_DIR"
 
@@ -18,6 +20,9 @@ bindkey '^[[1;5C' forward-word
 bindkey '^[[1;5D' backward-word
 
 alias ls='ls --color=auto'
+
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+[[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
 
 PROMPT='%F{red}▌%f%F{cyan}%Bcypher%b%f %F{magenta}//%f %F{yellow}%~%f
 %(?.%F{cyan}.%F{red})❯%f '
@@ -52,3 +57,5 @@ _cypher_preexec() {
 add-zsh-hook precmd _cypher_precmd
 add-zsh-hook preexec _cypher_preexec
 PROMPT+=$'%{\e]133;B\a%}'
+
+[[ -f "$HOME/.config/cypher/zshrc" ]] && source "$HOME/.config/cypher/zshrc"

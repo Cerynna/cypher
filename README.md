@@ -109,6 +109,10 @@ notify = false           # notifier le résultat en mode run / tab ; toujours vr
 
 Le `.exe` lance par défaut le zsh de la distribution WSL par défaut, avec la config CYPHER (`wsl.exe --cd <dossier> -- …`). Blocs de commande, nom du dépôt, liens `fichier:ligne`, reprise des sessions Claude et commandes en arrière-plan passent par WSL : les fichiers sont lus via `\\wsl.localhost\<distribution>\…` et VS Code s'ouvre en `--remote wsl+<distribution>`. La config de l'app reste côté Windows (`%USERPROFILE%\.config\cypher\config.toml`).
 
+## Config zsh de CYPHER
+
+Le zsh de CYPHER utilise `src-tauri/shell/zsh` (via `ZDOTDIR`) et non ton `~/.zshrc`, pour garder son propre prompt sans oh-my-zsh. Il reprend quand même ton environnement : `~/.zshenv`, `~/.profile` (donc `~/.local/bin`, `~/bin`, cargo) et nvm. Pour tes ajouts personnels (alias, `PATH`…), crée `~/.config/cypher/zshrc` : il est chargé en dernier.
+
 ## Intégration shell
 
 Le zsh lancé par CYPHER utilise `src-tauri/shell/zsh/.zshrc` (via `ZDOTDIR`), pas `~/.zshrc`. Il émet les séquences OSC 133 (début de prompt, début et fin de commande, code de sortie) et OSC 7 (dossier courant) dont dépendent les blocs de commande, l'héritage du dossier et les notifications.
