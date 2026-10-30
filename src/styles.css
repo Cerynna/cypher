@@ -10,7 +10,8 @@
   --warning: #f9f002;
   --danger: #ff2a6d;
   --success: #00ff9f;
-  --hud-font: "Kode Mono Variable", "Noto Color Emoji", monospace;
+  --emoji-fonts: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
+  --hud-font: "Kode Mono Variable", var(--emoji-fonts), monospace;
 }
 
 html,
@@ -425,7 +426,7 @@ body {
   border: 1px solid color-mix(in srgb, var(--highlight) 45%, transparent);
   background: color-mix(in srgb, var(--highlight) 8%, transparent);
   color: color-mix(in srgb, var(--fg) 80%, transparent);
-  font: 15px/1.2 "Noto Color Emoji", var(--hud-font);
+  font: 15px/1.2 var(--emoji-fonts), var(--hud-font);
   white-space: nowrap;
   cursor: pointer;
   clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
@@ -953,7 +954,7 @@ legend {
   height: 36px;
   border: 1px solid color-mix(in srgb, var(--highlight) 55%, transparent);
   background: var(--bg);
-  font: 20px/1 "Noto Color Emoji", var(--hud-font);
+  font: 20px/1 var(--emoji-fonts), var(--hud-font);
   cursor: pointer;
 }
 
@@ -1037,7 +1038,7 @@ legend {
   padding: 0;
   border: 1px solid transparent;
   background: transparent;
-  font: 20px/1 "Noto Color Emoji", var(--hud-font);
+  font: 20px/1 var(--emoji-fonts), var(--hud-font);
   cursor: pointer;
 }
 

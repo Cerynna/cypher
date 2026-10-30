@@ -1,6 +1,12 @@
 import type { ITheme } from "@xterm/xterm";
 import { type Palette, withOpacity } from "../domain/themes";
 
+export const EMOJI_FONTS = `"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji"`;
+
+export function fontStack(family: string): string {
+  return `"${family}", "Kode Mono Variable", ${EMOJI_FONTS}, monospace`;
+}
+
 const ANSI_KEYS = [
   "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
   "brightBlack", "brightRed", "brightGreen", "brightYellow", "brightBlue", "brightMagenta", "brightCyan", "brightWhite",
@@ -40,7 +46,7 @@ export function applyChromeTheme(palette: Palette, opacity: number, fontFamily: 
     "--tab-blue": palette.ansi[4],
     "--tab-magenta": palette.ansi[5],
     "--tab-cyan": palette.ansi[6],
-    "--hud-font": `"${fontFamily}", "Kode Mono Variable", "Noto Color Emoji", monospace`,
+    "--hud-font": fontStack(fontFamily),
   };
   const root = document.documentElement;
   for (const [name, value] of Object.entries(variables)) root.style.setProperty(name, value);

@@ -19,6 +19,7 @@ import { parseSemanticPrompt, parseWorkingDirectory, type ShellEvent } from "../
 import { existingPaths, repoRootOf } from "../infrastructure/system";
 import { Pty, type ShellOverride } from "../infrastructure/tauri-pty";
 import { copyText, TerminalClipboard } from "./clipboard";
+import { fontStack } from "./theme";
 
 export type TerminalSettings = {
   readonly fontFamily: string;
@@ -88,7 +89,7 @@ export class TerminalPane implements Pane, CommandPane {
     const terminal = new Terminal({
       allowProposedApi: true,
       allowTransparency: true,
-      fontFamily: `'${settings.fontFamily}', 'Kode Mono Variable', 'Noto Color Emoji', monospace`,
+      fontFamily: fontStack(settings.fontFamily),
       fontSize: settings.fontSize,
       lineHeight: settings.lineHeight,
       theme: settings.theme,
@@ -162,7 +163,7 @@ export class TerminalPane implements Pane, CommandPane {
 
   applySettings(settings: TerminalSettings): void {
     const options = this.terminal.options;
-    options.fontFamily = `'${settings.fontFamily}', 'Kode Mono Variable', 'Noto Color Emoji', monospace`;
+    options.fontFamily = fontStack(settings.fontFamily);
     options.fontSize = settings.fontSize;
     options.lineHeight = settings.lineHeight;
     options.theme = settings.theme;
