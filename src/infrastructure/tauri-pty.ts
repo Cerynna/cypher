@@ -42,6 +42,10 @@ export class Pty {
     return invoke("pty_resize", { id: this.id, ...size });
   }
 
+  setPaused(paused: boolean): Promise<void> {
+    return invoke("pty_set_paused", { id: this.id, paused });
+  }
+
   close(): Promise<void> {
     return invoke("pty_close", { id: this.id });
   }

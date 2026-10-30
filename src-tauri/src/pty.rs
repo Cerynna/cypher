@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use portable_pty::{native_pty_system, Child, ChildKiller, CommandBuilder, MasterPty, PtySize};
@@ -12,6 +12,7 @@ use tauri::{AppHandle, Manager, State};
 
 use crate::executable::{file_stem, find_in_path};
 use crate::input_queue::InputQueue;
+use crate::read_gate::ReadGate;
 use crate::registry::{Registry, SessionId};
 
 const READ_BUFFER_SIZE: usize = 8192;
@@ -21,12 +22,14 @@ const FALLBACK_SHELLS: [&str; 2] = ["pwsh", "powershell"];
 struct PtySession {
     master: Box<dyn MasterPty + Send>,
     input: InputQueue,
+    gate: Arc<ReadGate>,
     killer: Box<dyn ChildKiller + Send + Sync>,
 }
 
 impl Drop for PtySession {
     fn drop(&mut self) {
         let _ = self.killer.kill();
+        self.gate.set_paused(false);
     }
 }
 
@@ -108,9 +111,10 @@ fn shell_command(
     Ok(command)
 }
 
-fn read_chunks(mut reader: Box<dyn Read + Send>, chunks: Sender<Vec<u8>>) {
+fn read_chunks(mut reader: Box<dyn Read + Send>, gate: Arc<ReadGate>, chunks: Sender<Vec<u8>>) {
     let mut buffer = [0u8; READ_BUFFER_SIZE];
     loop {
+        gate.wait_until_open();
         match reader.read(&mut buffer) {
             Ok(0) | Err(_) => break,
             Ok(read) => {
@@ -135,12 +139,13 @@ fn next_batch(chunks: &Receiver<Vec<u8>>) -> Option<Vec<u8>> {
 
 fn stream_output(
     reader: Box<dyn Read + Send>,
+    gate: Arc<ReadGate>,
     mut child: Box<dyn Child + Send + Sync>,
     on_output: Channel<InvokeResponseBody>,
     on_exit: Channel<u32>,
 ) {
     let (sender, chunks) = mpsc::channel();
-    thread::spawn(move || read_chunks(reader, sender));
+    thread::spawn(move || read_chunks(reader, gate, sender));
     while let Some(batch) = next_batch(&chunks) {
         if on_output.send(InvokeResponseBody::Raw(batch)).is_err() {
             break;
@@ -175,11 +180,14 @@ pub fn pty_spawn(
     let killer = child.clone_killer();
     let reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
     let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
-    thread::spawn(move || stream_output(reader, child, on_output, on_exit));
+    let gate = Arc::new(ReadGate::default());
+    let reader_gate = Arc::clone(&gate);
+    thread::spawn(move || stream_output(reader, reader_gate, child, on_output, on_exit));
 
     let session = PtySession {
         master: pair.master,
         input: InputQueue::spawn(writer),
+        gate,
         killer,
     };
     Ok(state.0.lock().map_err(|e| e.to_string())?.insert(session))
@@ -214,6 +222,14 @@ pub fn pty_resize(
             .master
             .resize(size(cols, rows))
             .map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn pty_set_paused(state: State<PtyState>, id: SessionId, paused: bool) -> Result<(), String> {
+    with_session(&state, id, |session| {
+        session.gate.set_paused(paused);
+        Ok(())
     })
 }
 

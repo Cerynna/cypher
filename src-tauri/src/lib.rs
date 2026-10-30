@@ -6,6 +6,7 @@ mod editor;
 mod executable;
 mod input_queue;
 mod pty;
+mod read_gate;
 mod registry;
 
 use tauri::{Manager, RunEvent};
@@ -29,6 +30,7 @@ pub fn run() {
             pty::pty_write,
             pty::pty_resize,
             pty::pty_close,
+            pty::pty_set_paused,
             config::config_read,
             config::config_write,
             editor::existing_paths,

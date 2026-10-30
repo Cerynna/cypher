@@ -11,6 +11,7 @@ import type { ActionId } from "../domain/actions";
 import { type CommandBlock, CommandHistory, durationMs, formatDuration } from "../domain/command-history";
 import type { CursorStyle } from "../domain/config";
 import type { Keymap } from "../domain/keymap";
+import { FlowControl } from "../domain/flow-control";
 import { findFileLinks } from "../domain/links";
 import type { PaneId } from "../domain/pane-tree";
 import { directoryName, parseSemanticPrompt, parseWorkingDirectory, type ShellEvent } from "../domain/shell-integration";
@@ -62,6 +63,7 @@ export class TerminalPane implements Pane {
   private shellTitle = "";
   private pty: Pty | undefined;
   private pendingInput = "";
+  private readonly flow = FlowControl.create();
   private completionWaiters: ((block: CommandBlock<IMarker>) => void)[] = [];
   private opened = false;
   private disposed = false;
@@ -220,7 +222,7 @@ export class TerminalPane implements Pane {
       this.pty = await Pty.create(
         { cols: this.terminal.cols, rows: this.terminal.rows, cwd: this.cwdValue, shell: this.services.shell() },
         {
-          onOutput: (data) => this.terminal.write(data),
+          onOutput: (data) => this.writeOutput(data),
           onExit: () => this.events.onExit(),
         },
       );
@@ -230,6 +232,13 @@ export class TerminalPane implements Pane {
     } catch (error) {
       this.terminal.write(`\x1b[31mImpossible d'ouvrir le shell : ${error}\x1b[0m\r\n`);
     }
+  }
+
+  private writeOutput(data: Uint8Array): void {
+    if (this.flow.received(data.length) === "pause") void this.pty?.setPaused(true);
+    this.terminal.write(data, () => {
+      if (this.flow.rendered(data.length) === "resume") void this.pty?.setPaused(false);
+    });
   }
 
   private registerInput(): void {
