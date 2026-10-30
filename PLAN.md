@@ -54,7 +54,8 @@
 - [x] IA (Ctrl+Shift+A / Ctrl+Shift+X) : langage naturel → commande, explication du dernier échec. Appel HTTP depuis Rust, clé lue dans `ANTHROPIC_API_KEY`, jamais exposée au webview. Désactivée par défaut.
 - [x] Mode Quake : raccourci global qui affiche/masque la fenêtre — *à valider, les raccourcis globaux sont peu fiables sous WSLg*
 - [x] Opacité de la fenêtre et flou (acrylique Windows, vibrancy macOS) — *à valider, dépend du compositeur sous Linux*
-- [ ] Mises à jour automatiques et signature — écarté tant que CYPHER n'est pas distribué
+- [x] Release sur tag `vX.Y.Z` : `.exe` (Windows), `.deb` (Linux), `.dmg` (macOS universel) en release GitHub brouillon
+- [ ] Signature des installeurs et mises à jour automatiques
 
 Écartés : éditeur de saisie façon Warp (zsh le fait déjà), multiplexeur détachable (tmux existe), moteur de rendu maison.
 
@@ -66,6 +67,7 @@
 - [x] Commandes en arrière-plan : groupe de processus, arrêt au clic, arrêt à la fermeture, sortie bornée en continu
 - [x] Orchestration sortie de `main.ts` : use cases `QuickCommandRunner` et `ClaudeResume` testés avec des fakes
 - [ ] Intégration shell pour pwsh / bash (blocs, notifications, reprise Claude)
+- [x] CI GitHub Actions : tests et build front, `cargo fmt --check`, `clippy -D warnings`, tests Rust
 
 ## Architecture
 

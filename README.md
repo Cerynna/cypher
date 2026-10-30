@@ -9,6 +9,17 @@ yarn test                      # tests TypeScript
 cd src-tauri && cargo test     # tests Rust
 ```
 
+## Release
+
+La version de l'app vient de `package.json` (`tauri.conf.json` pointe dessus). Pour publier `0.2.0` :
+
+```sh
+yarn version --new-version 0.2.0   # commit « chore: release v0.2.0 » + tag v0.2.0
+git push --follow-tags
+```
+
+Le tag déclenche `.github/workflows/release.yml`, qui construit en parallèle `.exe` (Windows, NSIS), `.deb` (Linux) et `.dmg` (macOS universel), puis les joint à une release GitHub **en brouillon** à publier après vérification. Les installeurs ne sont pas signés. Le workflow peut aussi être lancé à la main (« Run workflow ») pour récupérer les installeurs en artefacts sans créer de release.
+
 ### Icône et menu Démarrer sous WSLg
 
 Sous Wayland, WSLg retrouve l'icône d'une fenêtre via un fichier `.desktop` portant son `app_id` (`cypher`), et ne lit que `/usr/share/applications` (pas `~/.local/share/applications`). Pour l'installer, ainsi qu'une entrée « CYPHER » dans le menu Démarrer de Windows (demande `sudo`) :
