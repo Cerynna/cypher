@@ -76,7 +76,7 @@ fn shell_invocation(host: &Host, command: &str, cwd: Option<&str>) -> Command {
         if let Some(dir) = cwd.filter(|dir| host.fs_path(dir).is_dir()) {
             wsl.args(["--cd", dir]);
         }
-        wsl.args(["--", "sh", "-c", command]);
+        wsl.args(["--exec", "sh", "-c", command]);
         wsl
     } else if cfg!(windows) {
         let mut cmd = Command::new("cmd");
@@ -195,6 +195,36 @@ pub async fn run_background(
 pub fn cancel_background(state: State<'_, Arc<BackgroundState>>, id: String) {
     if let Some(pid) = state.unregister(&id) {
         terminate_tree(pid);
+    }
+}
+
+#[cfg(test)]
+mod wsl_tests {
+    use super::*;
+
+    #[test]
+    fn transmet_la_commande_a_wsl_sans_la_faire_reinterpreter() {
+        let host = Host::Wsl {
+            distro: String::from("Ubuntu"),
+            home: String::from("/home/jm"),
+        };
+        let invocation = shell_invocation(&host, "echo \"$HOME\" | wc -c", None);
+        let args: Vec<_> = invocation
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(invocation.get_program(), "wsl.exe");
+        assert_eq!(
+            args,
+            [
+                "-d",
+                "Ubuntu",
+                "--exec",
+                "sh",
+                "-c",
+                "echo \"$HOME\" | wc -c"
+            ]
+        );
     }
 }
 

@@ -84,7 +84,7 @@ fn resolve_wsl(mode: &str) -> Option<Host> {
     } else {
         mode.to_owned()
     };
-    let home = wsl_output(&["-d", &distro, "--", "sh", "-c", "printf %s \"$HOME\""])?;
+    let home = wsl_output(&["-d", &distro, "--exec", "sh", "-c", "printf %s \"$HOME\""])?;
     let home = home.trim();
     (!home.is_empty()).then(|| Host::Wsl {
         distro,

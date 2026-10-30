@@ -81,7 +81,7 @@ fn wsl_args(distro: &str, cwd: Option<&str>, zdotdir: &str) -> Vec<String> {
         distro,
         "--cd",
         cwd.unwrap_or("~"),
-        "--",
+        "--exec",
         "sh",
         "-c",
         WSL_LAUNCHER,
@@ -301,7 +301,7 @@ mod tests {
         );
         assert_eq!(
             &args[..5],
-            ["-d", "Ubuntu", "--cd", "/home/jm/mon projet", "--"]
+            ["-d", "Ubuntu", "--cd", "/home/jm/mon projet", "--exec"]
         );
         assert_eq!(&args[5..7], ["sh", "-c"]);
         assert!(args[7].contains("ZDOTDIR=\"$1\""));
