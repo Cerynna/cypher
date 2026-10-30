@@ -20,6 +20,17 @@ git push --follow-tags
 
 Le tag déclenche `.github/workflows/release.yml`, qui construit en parallèle `.exe` (Windows, NSIS), `.deb` (Linux) et `.dmg` (macOS universel), puis les joint à une release GitHub **en brouillon** à publier après vérification. Les installeurs ne sont pas signés. Le workflow peut aussi être lancé à la main (« Run workflow ») pour récupérer les installeurs en artefacts sans créer de release, en choisissant la plateforme (`all`, `windows`, `linux`, `macos`) : `gh workflow run release.yml -f plateforme=windows`.
 
+### Mises à jour automatiques
+
+Au démarrage (et via la palette « Rechercher une mise à jour »), CYPHER interroge `latest.json` de la dernière release publiée et propose de s'installer puis de redémarrer. Les mises à jour sont signées : la clé privée est dans les secrets `TAURI_SIGNING_PRIVATE_KEY` et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` du dépôt, la clé publique dans `tauri.conf.json`. Un `yarn tauri build` local a besoin de la clé :
+
+```sh
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/cypher.key)"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$(cat ~/.tauri/cypher.key.password)"
+```
+
+Le `.deb` ne se met pas à jour seul (le plugin ne gère que NSIS, AppImage et macOS).
+
 ### Icône et menu Démarrer sous WSLg
 
 Sous Wayland, WSLg retrouve l'icône d'une fenêtre via un fichier `.desktop` portant son `app_id` (`cypher`), et ne lit que `/usr/share/applications` (pas `~/.local/share/applications`). Pour l'installer, ainsi qu'une entrée « CYPHER » dans le menu Démarrer de Windows (demande `sudo`) :
@@ -109,7 +120,7 @@ notify = false           # notifier le résultat en mode run / tab ; toujours vr
 
 ## Sous Windows avec WSL
 
-Le `.exe` lance par défaut le zsh de la distribution WSL par défaut, avec la config CYPHER (`wsl.exe --cd <dossier> -- …`). Blocs de commande, nom du dépôt, liens `fichier:ligne`, reprise des sessions Claude et commandes en arrière-plan passent par WSL : les fichiers sont lus via `\\wsl.localhost\<distribution>\…` et VS Code s'ouvre en `--remote wsl+<distribution>`. La config de l'app reste côté Windows (`%USERPROFILE%\.config\cypher\config.toml`).
+Le `.exe` lance par défaut le zsh de la distribution WSL par défaut, avec la config CYPHER (`wsl.exe --cd <dossier> -- …`). Blocs de commande, nom du dépôt, liens `fichier:ligne`, reprise des sessions Claude et commandes en arrière-plan passent par WSL : les fichiers sont lus via `\\wsl.localhost\<distribution>\…` et VS Code s'ouvre en `--remote wsl+<distribution>`. La config est partagée avec WSL : le `.exe` lit et surveille `~/.config/cypher/config.toml` de la distribution (copié depuis la config Windows au premier lancement s'il n'existe pas). Seule la clé `shell.wsl` est lue dans `%USERPROFILE%\.config\cypher\config.toml`, puisqu'elle décide de l'hôte ; la changer demande un redémarrage.
 
 ## Config zsh de CYPHER
 

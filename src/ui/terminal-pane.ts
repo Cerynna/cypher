@@ -11,6 +11,7 @@ import { type ActionId, passesThroughToShell } from "../domain/actions";
 import { type CommandBlock, CommandHistory, durationMs, formatDuration } from "../domain/command-history";
 import type { CursorStyle } from "../domain/config";
 import type { Keymap } from "../domain/keymap";
+import { type AttentionSignal, BELL_SIGNAL, KittyNotifications, parseOsc777, parseOsc9 } from "../domain/attention";
 import { FlowControl } from "../domain/flow-control";
 import { findFileLinks } from "../domain/links";
 import type { PaneId } from "../domain/pane-tree";
@@ -42,10 +43,14 @@ export type PaneServices = {
   readonly openFile: (path: string, line: number | undefined, column: number | undefined) => void;
   readonly openUrl: (url: string) => void;
   readonly onCommandFinished: (block: CommandBlock<IMarker>, pane: TerminalPane) => void;
+  readonly onAttention: (pane: TerminalPane, signal: AttentionSignal) => void;
 };
 
 const OSC_SEMANTIC_PROMPT = 133;
 const OSC_WORKING_DIRECTORY = 7;
+const OSC_ITERM_NOTIFICATION = 9;
+const OSC_KITTY_NOTIFICATION = 99;
+const OSC_DESKTOP_NOTIFICATION = 777;
 
 function lineText(terminal: XTerm, from: number, to: number): string {
   const buffer = terminal.buffer.active;
@@ -66,6 +71,8 @@ export class TerminalPane implements Pane, CommandPane {
   private shellTitle = "";
   private pty: Pty | undefined;
   private pendingInput = "";
+  private attentionSignal: AttentionSignal | undefined;
+  private readonly kittyNotifications = new KittyNotifications();
   private readonly flow = FlowControl.create();
   private completionWaiters: ((finished: FinishedCommand) => void)[] = [];
   private opened = false;
@@ -124,6 +131,10 @@ export class TerminalPane implements Pane, CommandPane {
     const current = this.history.current;
     if (current?.startedAt === undefined || current.finishedAt !== undefined || !current.command) return undefined;
     return { command: current.command, startedAt: current.startedAt };
+  }
+
+  get attention(): AttentionSignal | undefined {
+    return this.attentionSignal;
   }
 
   get title(): string {
@@ -241,6 +252,23 @@ export class TerminalPane implements Pane, CommandPane {
     }
   }
 
+  private isWatched(): boolean {
+    return document.hasFocus() && document.activeElement === this.terminal.textarea;
+  }
+
+  private raiseAttention(signal: AttentionSignal): void {
+    if (this.isWatched()) return;
+    this.attentionSignal = signal;
+    this.services.onAttention(this, signal);
+    this.events.onChange();
+  }
+
+  private clearAttention(): void {
+    if (!this.attentionSignal) return;
+    this.attentionSignal = undefined;
+    this.events.onChange();
+  }
+
   private async refreshRepoRoot(cwd: string): Promise<void> {
     const root = await repoRootOf(cwd);
     if (this.cwdValue !== cwd || root === this.repoRoot) return;
@@ -277,7 +305,10 @@ export class TerminalPane implements Pane, CommandPane {
         }
       }),
     );
-    this.terminal.textarea?.addEventListener("focus", () => this.events.onFocus());
+    this.terminal.textarea?.addEventListener("focus", () => {
+      this.clearAttention();
+      this.events.onFocus();
+    });
     this.element.addEventListener("contextmenu", (event) => {
       event.preventDefault();
       const done = this.terminal.hasSelection() ? this.clipboard.copySelection() : this.clipboard.pasteFromClipboard();
@@ -286,7 +317,16 @@ export class TerminalPane implements Pane, CommandPane {
   }
 
   private registerShellIntegration(): void {
+    const notify = (parse: (payload: string) => AttentionSignal | undefined) => (payload: string) => {
+      const signal = parse(payload);
+      if (signal) this.raiseAttention(signal);
+      return true;
+    };
     this.disposables.push(
+      this.terminal.parser.registerOscHandler(OSC_ITERM_NOTIFICATION, notify(parseOsc9)),
+      this.terminal.parser.registerOscHandler(OSC_DESKTOP_NOTIFICATION, notify(parseOsc777)),
+      this.terminal.parser.registerOscHandler(OSC_KITTY_NOTIFICATION, notify((payload) => this.kittyNotifications.receive(payload))),
+      this.terminal.onBell(() => this.raiseAttention(BELL_SIGNAL)),
       this.terminal.parser.registerOscHandler(OSC_SEMANTIC_PROMPT, (payload) => {
         const event = parseSemanticPrompt(payload);
         if (event) this.onShellEvent(event);

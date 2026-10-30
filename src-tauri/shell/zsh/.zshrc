@@ -7,6 +7,7 @@ HISTFILE="$CYPHER_STATE_DIR/zsh_history"
 HISTSIZE=50000
 SAVEHIST=50000
 setopt share_history hist_ignore_dups hist_ignore_space
+unsetopt beep
 
 autoload -Uz compinit
 compinit -d "$CYPHER_STATE_DIR/zcompdump"

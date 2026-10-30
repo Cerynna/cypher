@@ -70,9 +70,13 @@ export async function notify(title: string, body: string): Promise<void> {
   if (granted) sendNotification({ title, body });
 }
 
-export type HostInfo = { readonly kind: "native" | "wsl"; readonly distro: string | null };
+export type HostInfo = {
+  readonly kind: "native" | "wsl";
+  readonly distro: string | null;
+  readonly configError: string | null;
+};
 
-export const NATIVE_HOST: HostInfo = { kind: "native", distro: null };
+export const NATIVE_HOST: HostInfo = { kind: "native", distro: null, configError: null };
 
 export function configureHost(mode: string): Promise<HostInfo> {
   return invoke("host_configure", { mode });

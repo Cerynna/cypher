@@ -39,6 +39,13 @@ const themeLabel = (name: string): string => THEMES[name]?.label ?? name;
 
 type Section = { readonly title: string; readonly fields: readonly Field[] };
 
+const HOST_MODE_FIELD: Field = {
+  kind: "text",
+  label: "WSL sous Windows (auto, off ou distribution, au prochain lancement)",
+  read: (c) => c.shell.wsl,
+  write: (c, v) => ({ ...c, shell: { ...c.shell, wsl: v.trim() || "auto" } }),
+};
+
 const SECTIONS: readonly Section[] = [
   {
     title: "Disposition",
@@ -79,7 +86,7 @@ const SECTIONS: readonly Section[] = [
     title: "Shell et éditeur",
     fields: [
       { kind: "text", label: "Shell (vide = automatique)", read: (c) => c.shell.program, write: (c, v) => ({ ...c, shell: { ...c.shell, program: v.trim() } }) },
-      { kind: "text", label: "WSL sous Windows (auto, off ou distribution)", read: (c) => c.shell.wsl, write: (c, v) => ({ ...c, shell: { ...c.shell, wsl: v.trim() || "auto" } }) },
+      HOST_MODE_FIELD,
       { kind: "text", label: "Arguments du shell", read: (c) => c.shell.args.join(" "), write: (c, v) => ({ ...c, shell: { ...c.shell, args: v.split(/\s+/).filter(Boolean) } }) },
       { kind: "text", label: "Commande de l'éditeur", read: (c) => c.editor.command, write: (c, v) => ({ ...c, editor: { command: v } }) },
     ],
@@ -178,7 +185,14 @@ export type SettingsActions = {
   readonly onClose: () => void;
 };
 
-export function openSettings(config: Config, configPath: string, actions: SettingsActions): void {
+export type SettingsOptions = { readonly hostModeEditable: boolean };
+
+export function openSettings(
+  config: Config,
+  configPath: string,
+  options: SettingsOptions,
+  actions: SettingsActions,
+): void {
   let draft = config;
   let saved = false;
   const overlay = openOverlay(
@@ -200,6 +214,7 @@ export function openSettings(config: Config, configPath: string, actions: Settin
     legend.textContent = section.title;
     fieldset.append(legend);
     for (const field of section.fields) {
+      if (field === HOST_MODE_FIELD && !options.hostModeEditable) continue;
       const row = document.createElement("label");
       row.className = `settings__row settings__row--${field.kind}`;
       const name = document.createElement("span");

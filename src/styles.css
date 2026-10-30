@@ -304,6 +304,29 @@ body {
   box-shadow: none;
 }
 
+.tab--attention {
+  --tab-color: var(--warning);
+  box-shadow: inset 0 2px 0 var(--warning);
+}
+
+.tab--attention .tab__label::before {
+  content: "●";
+  margin-right: 6px;
+  color: var(--warning);
+  text-shadow: 0 0 6px var(--warning);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.frame[data-tabs="bottom"] .tab--attention {
+  box-shadow: inset 0 -2px 0 var(--warning);
+}
+
+.frame[data-tabs="left"] .tab--attention,
+.frame[data-tabs="right"] .tab--attention {
+  box-shadow: none;
+  border-left-color: var(--warning);
+}
+
 .tab__label {
   overflow: hidden;
   white-space: nowrap;
@@ -1373,6 +1396,7 @@ legend {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .tab--attention .tab__label::before,
   .hud__brand::before,
   .hud__brand::after,
   .hud__pulse,

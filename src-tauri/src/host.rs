@@ -5,6 +5,7 @@ use std::sync::RwLock;
 use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 
+use crate::config::ConfigState;
 use crate::wsl;
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -97,21 +98,33 @@ fn resolve_wsl(mode: &str) -> Option<Host> {
 pub struct HostInfo {
     kind: &'static str,
     distro: Option<String>,
+    config_error: Option<String>,
 }
 
 #[tauri::command]
-pub async fn host_configure(state: State<'_, HostState>, mode: String) -> Result<HostInfo, String> {
-    let host = tauri::async_runtime::spawn_blocking(move || resolve_wsl(&mode).unwrap_or_default())
-        .await
-        .map_err(|e| e.to_string())?;
+pub async fn host_configure(
+    app: AppHandle,
+    state: State<'_, HostState>,
+    mode: String,
+) -> Result<HostInfo, String> {
+    let (host, shared) = tauri::async_runtime::spawn_blocking(move || {
+        let host = resolve_wsl(&mode).unwrap_or_default();
+        let shared = app.state::<ConfigState>().share_with(&app, &host);
+        (host, shared)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    let config_error = shared.err();
     let info = match &host {
         Host::Native => HostInfo {
             kind: "native",
             distro: None,
+            config_error,
         },
         Host::Wsl { distro, .. } => HostInfo {
             kind: "wsl",
             distro: Some(distro.clone()),
+            config_error,
         },
     };
     *state.0.write().map_err(|e| e.to_string())? = host;

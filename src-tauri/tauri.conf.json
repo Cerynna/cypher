@@ -51,6 +51,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -61,6 +62,12 @@
     ],
     "resources": {
       "shell/": "shell/"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZENDdFQUU0NDlEMENBRjUKUldUMXl0Qko1T3BIYlZ0b0YxWUJDWVNCYVhtdFRJNm41NmZJMUpSemxwVjF1cTNTSkh2OXVTVVAK",
+      "endpoints": ["https://github.com/Cerynna/cypher/releases/latest/download/latest.json"]
     }
   }
 }

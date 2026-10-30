@@ -1,5 +1,6 @@
 import type { WorkspaceRenderer } from "../application/ports";
 import {
+  paneIds,
   clampRatio,
   DEFAULT_RATIO,
   type PaneId,
@@ -97,6 +98,11 @@ export class WorkspaceView implements WorkspaceRenderer<TerminalPane> {
       const button = element("button", "tab");
       button.dataset.tabId = tab.id;
       button.classList.toggle("tab--active", tab.id === workspace.activeTabId);
+      const attention = paneIds(tab.root)
+        .map((id) => panes.get(id)?.attention)
+        .find((signal) => signal !== undefined);
+      button.classList.toggle("tab--attention", attention !== undefined);
+      if (attention) button.title = `🔔 ${attention.body}`;
       if (tab.color) button.classList.add("tab--colored", `tab-color--${tab.color}`);
       button.title = panes.get(tab.focusedPane)?.cwd ?? "";
       const automatic = panes.get(tab.focusedPane)?.title ?? "shell";

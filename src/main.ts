@@ -37,6 +37,7 @@ import {
   setWindowTitle,
   toggleFullscreen,
 } from "./infrastructure/system";
+import { findUpdate } from "./infrastructure/updater";
 import { openAiCommand, openAiExplanation } from "./ui/ai-panel";
 import { openResumeList } from "./ui/claude-resume";
 import { openCommandPalette } from "./ui/command-palette";
@@ -87,21 +88,14 @@ function terminalSettings(): TerminalSettings {
 }
 
 let host: HostInfo = NATIVE_HOST;
-let configuredHostMode: string | undefined;
-let hostReady: Promise<void> = Promise.resolve();
 
-function applyHostMode(mode: string): Promise<void> {
-  if (mode === configuredHostMode) return hostReady;
-  configuredHostMode = mode;
-  hostReady = configureHost(mode)
-    .then((info) => {
-      host = info;
-    })
-    .catch((error: unknown) => {
-      host = NATIVE_HOST;
-      reportError(error);
-    });
-  return hostReady;
+async function configureHostOnce(mode: string): Promise<void> {
+  host = await configureHost(mode).catch((error: unknown) => {
+    reportError(error);
+    return NATIVE_HOST;
+  });
+  if (host.configError) showToast(`Config WSL inaccessible, config Windows utilisée : ${host.configError}`, "error");
+  if (host.kind === "wsl") applyConfig(await loadConfig());
 }
 
 function shellContext(cwd: string | undefined): ShellContext {
@@ -126,6 +120,12 @@ const services: PaneServices = {
   onAction: (action) => runAction(action),
   openFile,
   openUrl: (url) => void openExternalUrl(url).catch(reportError),
+  onAttention: (pane, signal) => {
+    const tab = controller.tabLabelOf(pane.id) ?? pane.title;
+    const title = `🔔 ${signal.title ?? "Attention"} · ${tab}`;
+    if (!document.hasFocus()) return void notify(title, signal.body).catch(() => undefined);
+    showToast(`${title}\n${signal.body}`, "info", { label: "Voir", run: () => controller.focusPane(pane.id) });
+  },
   onCommandFinished: (block, pane) => {
     if (!shouldNotifyCompletion(block, config.notifications.longCommandSeconds, document.hasFocus())) return;
     const status = block.exitCode === 0 ? "réussie" : `échec (code ${block.exitCode})`;
@@ -251,7 +251,6 @@ function applyConfig(next: LoadedConfig): void {
   renderQuickCommands(quickCommandsHost, config.commands, { onRun: runQuickCommand, onCreate: createQuickCommand });
   void applyWindowBlur(config.terminal.blur).catch(() => undefined);
   void bindQuakeShortcut(config.quake.enabled, config.quake.shortcut).catch(reportError);
-  void applyHostMode(config.shell.wsl);
   const problems = [...next.problems, ...keymap.problems];
   if (problems.length > 0) showToast(`config.toml : ${problems.join(" · ")}`, "error");
 }
@@ -289,9 +288,22 @@ function explainLastFailure(): void {
   openAiExplanation(block.command ?? "dernière erreur", askClaude(config.ai.model, system, prompt), refocus);
 }
 
+async function checkForUpdate(): Promise<boolean> {
+  const update = await findUpdate();
+  if (!update) return false;
+  showToast(`CYPHER ${update.version} est disponible.`, "info", {
+    label: "Mettre à jour",
+    run: () => {
+      showToast(`Téléchargement de CYPHER ${update.version}…`);
+      void update.install(() => controller.freeze()).catch(reportError);
+    },
+  });
+  return true;
+}
+
 async function openConfigFile(): Promise<void> {
   if (!loaded.exists) await saveConfig(config);
-  openWithEditor(loaded.path, undefined, undefined);
+  openFile(loaded.path, undefined, undefined);
 }
 
 const claudeResume = ClaudeResume.create<TerminalPane>({
@@ -369,7 +381,7 @@ const actions: Readonly<Record<ActionId, () => void>> = {
       .catch(reportError),
   commandPalette: openPalette,
   settings: () =>
-    openSettings(config, loaded.path, {
+    openSettings(config, loaded.path, { hostModeEditable: platformName() === "Windows" && host.kind === "native" }, {
       onSave: (next) => saveAndApply(next).catch(reportError),
       onPreview: previewConfig,
       onOpenFile: () => void openConfigFile().catch(reportError),
@@ -381,6 +393,10 @@ const actions: Readonly<Record<ActionId, () => void>> = {
   aiExplain: explainLastFailure,
   newQuickCommand: createQuickCommand,
   resumeClaude: () => void browseClaudeSessions().catch(reportError),
+  checkForUpdate: () =>
+    void checkForUpdate()
+      .then((found) => found || showToast("CYPHER est à jour."))
+      .catch(reportError),
 };
 
 function runAction(action: ActionId): void {
@@ -403,8 +419,9 @@ await Promise.all([
   document.fonts.load(`${fontSize.value}px 'Noto Color Emoji'`, COMMON_EMOJIS + config.commands.map((c) => c.emoji).join("")),
 ]).catch(() => undefined);
 applyConfig(loaded);
-await applyHostMode(config.shell.wsl);
+await configureHostOnce(config.shell.wsl);
 void onWindowClosing(() => controller.freeze());
 const interrupted = controller.start();
 void offerInterruptedClaudeSessions(interrupted).catch(reportError);
+void checkForUpdate().catch(() => undefined);
 void watchConfig(() => void loadConfig().then(applyConfig).catch(reportError));

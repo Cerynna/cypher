@@ -82,6 +82,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: CYPHER ${{ github.ref_name }}
@@ -90,6 +92,7 @@ jobs:
             - Windows : SmartScreen affiche un avertissement, « Informations complémentaires » puis « Exécuter quand même ».
             - macOS : si l'app est déclarée « endommagée », lancer `xattr -cr /Applications/CYPHER.app`.
           releaseDraft: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
 
       - name: Artefacts du build manuel

@@ -26,6 +26,7 @@ export const ACTION_LABELS = {
   openConfigFile: "Ouvrir config.toml dans l'éditeur",
   newQuickCommand: "Créer une commande rapide",
   resumeClaude: "Reprendre une session Claude…",
+  checkForUpdate: "Rechercher une mise à jour",
   aiCommand: "IA : générer une commande",
   aiExplain: "IA : expliquer la dernière erreur",
 } as const;
