@@ -6,7 +6,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import type { IBufferRange, IDisposable, ILink, IMarker, ITheme, Terminal as XTerm } from "@xterm/xterm";
 import { Terminal } from "@xterm/xterm";
-import type { Pane, PaneEvents, PaneRequest, RunningCommand } from "../application/ports";
+import type { CommandPane, FinishedCommand, Pane, PaneEvents, PaneRequest, RunningCommand } from "../application/ports";
 import type { ActionId } from "../domain/actions";
 import { type CommandBlock, CommandHistory, durationMs, formatDuration } from "../domain/command-history";
 import type { CursorStyle } from "../domain/config";
@@ -57,14 +57,14 @@ function lineText(terminal: XTerm, from: number, to: number): string {
   return text.trimEnd();
 }
 
-export class TerminalPane implements Pane {
+export class TerminalPane implements Pane, CommandPane {
   private history = CommandHistory.empty<IMarker>();
   private cwdValue: string | undefined;
   private shellTitle = "";
   private pty: Pty | undefined;
   private pendingInput = "";
   private readonly flow = FlowControl.create();
-  private completionWaiters: ((block: CommandBlock<IMarker>) => void)[] = [];
+  private completionWaiters: ((finished: FinishedCommand) => void)[] = [];
   private opened = false;
   private disposed = false;
   private readonly disposables: IDisposable[] = [];
@@ -167,7 +167,7 @@ export class TerminalPane implements Pane {
     this.fit();
   }
 
-  nextCommandFinished(): Promise<CommandBlock<IMarker>> {
+  nextCommandFinished(): Promise<FinishedCommand> {
     return new Promise((resolve) => this.completionWaiters.push(resolve));
   }
 
@@ -301,7 +301,13 @@ export class TerminalPane implements Pane {
     this.decorateBlock(block);
     const waiters = this.completionWaiters;
     this.completionWaiters = [];
-    for (const resolve of waiters) resolve(block);
+    const finished: FinishedCommand = {
+      command: block.command,
+      exitCode: block.exitCode,
+      durationMs: durationMs(block),
+      output: this.outputOf(block),
+    };
+    for (const resolve of waiters) resolve(finished);
     this.services.onCommandFinished(block, this);
     this.events.onChange();
   }

@@ -58,12 +58,21 @@
 
 Écartés : éditeur de saisie façon Warp (zsh le fait déjà), multiplexeur détachable (tmux existe), moteur de rendu maison.
 
+## Robustesse (revue du 2026-10-30)
+
+- [x] Écriture PTY non bloquante : file d'entrée et thread d'écriture par session (`input_queue.rs`)
+- [x] Build release vérifié, CSP de production sans violation (polices, WebGL, overlays)
+- [x] Contre-pression : lecture du PTY suspendue au-delà de 512 Ko non rendus, reprise sous 128 Ko (`domain/flow-control.ts`, `read_gate.rs`)
+- [x] Commandes en arrière-plan : groupe de processus, arrêt au clic, arrêt à la fermeture, sortie bornée en continu
+- [x] Orchestration sortie de `main.ts` : use cases `QuickCommandRunner` et `ClaudeResume` testés avec des fakes
+- [ ] Intégration shell pour pwsh / bash (blocs, notifications, reprise Claude)
+
 ## Architecture
 
 ```
 src/domain/          règles pures, aucune dépendance (keymap, workspace, pane-tree, config, themes,
                      shell-integration, command-history, links, fuzzy, ai-prompts, paste, font-size)
-src/application/     WorkspaceController + ports (PaneFactory, WorkspaceRenderer, SessionStore, AppWindow)
+src/application/     WorkspaceController, QuickCommandRunner, ClaudeResume + ports
 src/infrastructure/  adapters Tauri (PTY, config, session, système)
 src/ui/              xterm.js et DOM (TerminalPane, WorkspaceView, overlays)
 src/main.ts          racine de composition

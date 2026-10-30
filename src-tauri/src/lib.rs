@@ -9,6 +9,8 @@ mod pty;
 mod read_gate;
 mod registry;
 
+use std::sync::Arc;
+
 use tauri::{Manager, RunEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -20,6 +22,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(pty::PtyState::default())
+        .manage(Arc::new(background::BackgroundState::default()))
         .setup(|app| {
             let watcher = config::watch(app.handle())?;
             app.manage(watcher);
@@ -37,6 +40,7 @@ pub fn run() {
             editor::open_in_editor,
             ai::ai_ask,
             background::run_background,
+            background::cancel_background,
             claude::claude_sessions
         ])
         .build(tauri::generate_context!())
@@ -44,6 +48,7 @@ pub fn run() {
         .run(|app, event| {
             if let RunEvent::Exit = event {
                 app.state::<pty::PtyState>().close_all();
+                app.state::<Arc<background::BackgroundState>>().terminate_all();
             }
         });
 }

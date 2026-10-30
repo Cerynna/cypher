@@ -5,6 +5,7 @@ import {
   completionMessage,
   createQuickCommand,
   firstGrapheme,
+  isOwnCompletion,
   plainText,
   type QuickCommand,
   terminalInput,
@@ -65,6 +66,30 @@ describe("commandes rapides", () => {
       title: "🔨 Build : échec (code 2)",
       body: "yarn build",
       failed: true,
+    });
+  });
+});
+
+describe("isOwnCompletion", () => {
+  it("reconnaît la fin de sa propre commande", () => {
+    expect(isOwnCompletion(build, " yarn build ")).toBe(true);
+    expect(isOwnCompletion(build, "yarn test")).toBe(false);
+    expect(isOwnCompletion(build, undefined)).toBe(false);
+  });
+
+  it("attend la dernière ligne d'une commande sur plusieurs lignes", () => {
+    const multi = { ...build, command: "git fetch\ngit status\n" };
+    expect(isOwnCompletion(multi, "git fetch")).toBe(false);
+    expect(isOwnCompletion(multi, "git status")).toBe(true);
+  });
+});
+
+describe("completionMessage d'une commande arrêtée", () => {
+  it("n'est pas un échec", () => {
+    expect(completionMessage(build, { exitCode: undefined, durationMs: 2_000, output: "", cancelled: true }, formatDuration)).toEqual({
+      title: "🔨 Build : arrêté en 2,0 s",
+      body: "yarn build",
+      failed: false,
     });
   });
 });

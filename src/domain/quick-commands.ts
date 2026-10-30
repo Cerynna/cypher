@@ -79,7 +79,16 @@ export type CommandOutcome = {
   readonly exitCode: number | undefined;
   readonly durationMs: number | undefined;
   readonly output: string;
+  readonly cancelled?: boolean;
 };
+
+export function isOwnCompletion(quickCommand: QuickCommand, finishedCommand: string | undefined): boolean {
+  const lastLine = quickCommand.command
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .findLast((line) => line !== "");
+  return lastLine !== undefined && finishedCommand?.trim() === lastLine;
+}
 
 export type CompletionMessage = { readonly title: string; readonly body: string; readonly failed: boolean };
 
@@ -99,8 +108,8 @@ export function completionMessage(
   outcome: CommandOutcome,
   formatDuration: (ms: number) => string,
 ): CompletionMessage {
-  const failed = outcome.exitCode !== 0;
-  const status = failed ? `échec (code ${outcome.exitCode ?? "?"})` : "terminé";
+  const failed = !outcome.cancelled && outcome.exitCode !== 0;
+  const status = outcome.cancelled ? "arrêté" : failed ? `échec (code ${outcome.exitCode ?? "?"})` : "terminé";
   const duration = outcome.durationMs === undefined ? "" : ` en ${formatDuration(outcome.durationMs)}`;
   return {
     title: `${quickCommand.emoji} ${quickCommand.name} : ${status}${duration}`,

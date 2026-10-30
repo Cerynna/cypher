@@ -2,6 +2,8 @@ import "@fontsource-variable/kode-mono";
 import "@fontsource/noto-color-emoji";
 import "@xterm/xterm/css/xterm.css";
 import "./styles.css";
+import { ClaudeResume } from "./application/claude-resume";
+import { type QuickCommandExecution, QuickCommandRunner } from "./application/quick-command-runner";
 import { WorkspaceController } from "./application/workspace-controller";
 import { ACTION_IDS, ACTION_LABELS, type ActionId, isActionId } from "./domain/actions";
 import { commandPrompt, explainPrompt, extractCommand, type ShellContext } from "./domain/ai-prompts";
@@ -10,16 +12,8 @@ import type { InterruptedCommand } from "./application/ports";
 import type { Config } from "./domain/config";
 import { FontSize } from "./domain/font-size";
 import { formatChord, Keymap } from "./domain/keymap";
-import { type ClaudeSession, isClaudeCommand, matchSession, resumeCommand } from "./domain/claude-sessions";
 import { editorInvocation } from "./domain/links";
-import {
-  type CommandOutcome,
-  completionMessage,
-  plainText,
-  type QuickCommand,
-  terminalInput,
-  waitsForCompletion,
-} from "./domain/quick-commands";
+import { plainText, type QuickCommand } from "./domain/quick-commands";
 import { resolveTheme } from "./domain/themes";
 import { windowTitle } from "./domain/window-title";
 import { type LoadedConfig, loadConfig, saveConfig, watchConfig } from "./infrastructure/config-file";
@@ -28,6 +22,7 @@ import {
   applyWindowBlur,
   askClaude,
   bindQuakeShortcut,
+  cancelBackground,
   claudeSessions,
   closeWindow,
   notify,
@@ -39,11 +34,11 @@ import {
   setWindowTitle,
 } from "./infrastructure/system";
 import { openAiCommand, openAiExplanation } from "./ui/ai-panel";
-import { openResumeList, type ResumeEntry } from "./ui/claude-resume";
+import { openResumeList } from "./ui/claude-resume";
 import { openCommandPalette } from "./ui/command-palette";
 import { openOutputViewer } from "./ui/output-viewer";
 import { attachTooltip } from "./ui/tooltip";
-import { placeDock, type QuickCommandRun, renderQuickCommands } from "./ui/dock";
+import { placeDock, renderQuickCommands } from "./ui/dock";
 import { openQuickCommandForm } from "./ui/quick-command-form";
 import { showToast } from "./ui/overlay";
 import { SearchBar } from "./ui/search-bar";
@@ -162,41 +157,25 @@ function applyFontSize(next: FontSize): void {
   for (const pane of controller.all) pane.applySettings(terminalSettings());
 }
 
-const UNTRACKED_RUN: QuickCommandRun = { finished: () => undefined };
+const quickCommands = QuickCommandRunner.create<TerminalPane>({
+  workspace: controller,
+  background: { run: runBackground, cancel: cancelBackground },
+  notifier: {
+    notify: (completion) => {
+      showToast(`${completion.title}\n${completion.body}`, completion.failed ? "error" : "info", {
+        label: "Voir la sortie",
+        run: () => openOutputViewer(completion.title, plainText(completion.output), refocus),
+      });
+      void notify(completion.title, completion.body).catch(() => undefined);
+    },
+  },
+  newId: () => crypto.randomUUID(),
+});
 
-function announce(quickCommand: QuickCommand, outcome: CommandOutcome): void {
-  const message = completionMessage(quickCommand, outcome, formatDuration);
-  showToast(`${message.title}\n${message.body}`, message.failed ? "error" : "info", {
-    label: "Voir la sortie",
-    run: () => openOutputViewer(message.title, plainText(outcome.output), refocus),
-  });
-  void notify(message.title, message.body).catch(() => undefined);
-}
-
-function runInBackground(quickCommand: QuickCommand, run: QuickCommandRun): void {
-  runBackground(quickCommand.command, controller.focused?.cwd)
-    .then((result) =>
-      announce(quickCommand, { exitCode: result.exitCode ?? undefined, durationMs: result.durationMs, output: result.output }),
-    )
-    .catch(reportError)
-    .finally(run.finished);
-}
-
-function runQuickCommand(quickCommand: QuickCommand, run: QuickCommandRun = UNTRACKED_RUN): void {
-  if (quickCommand.mode === "background") return runInBackground(quickCommand, run);
-  if (quickCommand.mode === "tab" || !controller.focused) controller.newTab();
-  const pane = controller.focused;
-  if (!pane) return run.finished();
-  if (waitsForCompletion(quickCommand)) {
-    void pane.nextCommandFinished().then((block) => {
-      run.finished();
-      announce(quickCommand, { exitCode: block.exitCode, durationMs: durationMs(block), output: pane.outputOf(block) });
-    });
-  } else {
-    run.finished();
-  }
-  pane.write(terminalInput(quickCommand));
-  pane.focus();
+function runQuickCommand(quickCommand: QuickCommand): QuickCommandExecution {
+  const execution = quickCommands.run(quickCommand);
+  execution.finished.catch(reportError);
+  return execution;
 }
 
 async function saveAndApply(next: Config): Promise<void> {
@@ -287,41 +266,15 @@ async function openConfigFile(): Promise<void> {
   openFile(loaded.path, undefined, undefined);
 }
 
-const CLAUDE_SESSION_LIMIT = 50;
-const RECENT_SESSIONS_SHOWN = 12;
-
-function resumeInPane(paneId: string, command: string): void {
-  if (!controller.pane(paneId)) {
-    controller.newTab();
-    controller.focused?.write(`${command}\r`);
-    return;
-  }
-  controller.focusPane(paneId);
-  controller.pane(paneId)?.write(`${command}\r`);
-}
-
-async function interruptedClaudeEntries(interrupted: readonly InterruptedCommand[]): Promise<readonly ResumeEntry[]> {
-  const claudeRuns = interrupted.filter((run) => isClaudeCommand(run.command));
-  return Promise.all(
-    claudeRuns.map(async (run): Promise<ResumeEntry> => {
-      const sessions = run.cwd ? await claudeSessions(run.cwd, CLAUDE_SESSION_LIMIT).catch(() => []) : [];
-      const session = matchSession(run.command, run.startedAt, sessions);
-      return {
-        title: controller.tabLabelOf(run.paneId) ?? controller.pane(run.paneId)?.title ?? "claude",
-        cwd: run.cwd,
-        preview: session?.preview ?? null,
-        lastActivity: session?.modifiedMs ?? run.startedAt,
-        sessionFound: session !== undefined,
-        resume: () => resumeInPane(run.paneId, resumeCommand(session?.id)),
-      };
-    }),
-  );
-}
+const claudeResume = ClaudeResume.create<TerminalPane>({
+  workspace: controller,
+  sessions: { list: claudeSessions },
+});
 
 async function offerInterruptedClaudeSessions(interrupted: readonly InterruptedCommand[]): Promise<void> {
-  const entries = await interruptedClaudeEntries(interrupted);
-  if (entries.length === 0) return;
-  openResumeList(entries, {
+  const candidates = await claudeResume.interrupted(interrupted);
+  if (candidates.length === 0) return;
+  openResumeList(candidates, {
     heading: "Sessions Claude interrompues",
     intro: "Ces sessions Claude tournaient à la fermeture de CYPHER. Reprends-les dans leur panneau d'origine.",
     emptyText: "",
@@ -329,33 +282,15 @@ async function offerInterruptedClaudeSessions(interrupted: readonly InterruptedC
   });
 }
 
-function sessionEntry(session: ClaudeSession, cwd: string): ResumeEntry {
-  return {
-    title: session.preview ? "Session Claude" : session.id.slice(0, 8),
-    cwd,
-    preview: session.preview,
-    lastActivity: session.modifiedMs,
-    sessionFound: true,
-    resume: () => {
-      controller.newTab();
-      controller.focused?.write(`${resumeCommand(session.id)}\r`);
-    },
-  };
-}
-
 async function browseClaudeSessions(): Promise<void> {
-  const cwd = controller.focused?.cwd;
-  if (!cwd) return showToast("Dossier courant inconnu dans ce panneau.");
-  const sessions = await claudeSessions(cwd, RECENT_SESSIONS_SHOWN);
-  openResumeList(
-    sessions.map((session) => sessionEntry(session, cwd)),
-    {
-      heading: "Reprendre une session Claude",
-      intro: `Sessions récentes dans ${cwd.replace(/^\/home\/[^/]+/, "~")}. La session choisie s'ouvre dans un nouvel onglet.`,
-      emptyText: "Aucune session Claude dans ce dossier.",
-      onClose: refocus,
-    },
-  );
+  const recent = await claudeResume.recent();
+  if (!recent) return showToast("Dossier courant inconnu dans ce panneau.");
+  openResumeList(recent.candidates, {
+    heading: "Reprendre une session Claude",
+    intro: `Sessions récentes dans ${recent.cwd.replace(/^\/home\/[^/]+/, "~")}. La session choisie s'ouvre dans un nouvel onglet.`,
+    emptyText: "Aucune session Claude dans ce dossier.",
+    onClose: refocus,
+  });
 }
 
 function openPalette(): void {

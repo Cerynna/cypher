@@ -1,14 +1,8 @@
+import type { ResumeCandidate } from "../application/claude-resume";
 import { formatAgo } from "../domain/claude-sessions";
 import { openOverlay } from "./overlay";
 
-export type ResumeEntry = {
-  readonly title: string;
-  readonly cwd: string | undefined;
-  readonly preview: string | null;
-  readonly lastActivity: number | undefined;
-  readonly sessionFound: boolean;
-  readonly resume: () => void;
-};
+type ResumeEntry = ResumeCandidate;
 
 export type ResumeListOptions = {
   readonly heading: string;

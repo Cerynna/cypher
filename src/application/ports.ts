@@ -1,4 +1,5 @@
 import type { PaneId } from "../domain/pane-tree";
+import type { ClaudeSession } from "../domain/claude-sessions";
 import type { Workspace, WorkspaceSnapshot } from "../domain/workspace";
 
 export type PaneRequest = { readonly id: PaneId; readonly cwd: string | undefined };
@@ -46,4 +47,54 @@ export interface SessionStore {
 
 export interface AppWindow {
   close(): void;
+}
+
+export type FinishedCommand = {
+  readonly command: string | undefined;
+  readonly exitCode: number | undefined;
+  readonly durationMs: number | undefined;
+  readonly output: string;
+};
+
+export interface CommandPane {
+  readonly cwd: string | undefined;
+  readonly title: string;
+  write(data: string): void;
+  focus(): void;
+  nextCommandFinished(): Promise<FinishedCommand>;
+}
+
+export interface CommandWorkspace<P extends CommandPane> {
+  readonly focused: P | undefined;
+  newTab(): void;
+  pane(id: PaneId): P | undefined;
+  focusPane(id: PaneId): void;
+  tabLabelOf(id: PaneId): string | undefined;
+}
+
+export type BackgroundOutcome = {
+  readonly exitCode: number | undefined;
+  readonly durationMs: number;
+  readonly output: string;
+  readonly cancelled: boolean;
+};
+
+export interface BackgroundRunner {
+  run(id: string, command: string, cwd: string | undefined): Promise<BackgroundOutcome>;
+  cancel(id: string): Promise<void>;
+}
+
+export type Completion = {
+  readonly title: string;
+  readonly body: string;
+  readonly failed: boolean;
+  readonly output: string;
+};
+
+export interface CompletionNotifier {
+  notify(completion: Completion): void;
+}
+
+export interface ClaudeSessionStore {
+  list(cwd: string, limit: number): Promise<readonly ClaudeSession[]>;
 }

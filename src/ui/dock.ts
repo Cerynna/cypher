@@ -1,3 +1,4 @@
+import type { QuickCommandExecution } from "../application/quick-command-runner";
 import { QUICK_COMMAND_MODE_LABELS, type QuickCommand, type TabPosition } from "../domain/quick-commands";
 import { attachTooltip, type TooltipContent } from "./tooltip";
 
@@ -17,20 +18,20 @@ export function placeDock(layout: DockLayout, position: TabPosition): void {
   else layout.body.append(layout.dock);
 }
 
-export type QuickCommandRun = { readonly finished: () => void };
-
 export type QuickCommandCallbacks = {
-  readonly onRun: (quickCommand: QuickCommand, run: QuickCommandRun) => void;
+  readonly onRun: (quickCommand: QuickCommand) => QuickCommandExecution;
   readonly onCreate: () => void;
 };
 
-function tooltip(quickCommand: QuickCommand): TooltipContent {
+function tooltip(quickCommand: QuickCommand, execution: QuickCommandExecution | undefined): TooltipContent {
   const notice = quickCommand.notify && quickCommand.mode !== "background" ? " · notification" : "";
+  const status = execution?.cancel ? [{ text: "En cours · clic pour arrêter", tone: "code" as const }] : [];
   return {
     title: `${quickCommand.emoji} ${quickCommand.name}`,
     lines: [
       { text: quickCommand.command, tone: "code" },
       { text: `${QUICK_COMMAND_MODE_LABELS[quickCommand.mode]}${notice}`, tone: "muted" },
+      ...status,
     ],
   };
 }
@@ -45,10 +46,22 @@ export function renderQuickCommands(
     button.className = "quick-command";
     button.textContent = quickCommand.emoji;
     button.setAttribute("aria-label", quickCommand.name);
-    attachTooltip(button, () => tooltip(quickCommand));
+    let execution: QuickCommandExecution | undefined;
+    attachTooltip(button, () => tooltip(quickCommand, execution));
     button.addEventListener("click", () => {
+      if (execution?.cancel) return execution.cancel();
+      const current = callbacks.onRun(quickCommand);
+      execution = current;
       button.classList.add("quick-command--running");
-      callbacks.onRun(quickCommand, { finished: () => button.classList.remove("quick-command--running") });
+      button.setAttribute("aria-busy", "true");
+      void current.finished
+        .catch(() => undefined)
+        .finally(() => {
+          if (execution !== current) return;
+          execution = undefined;
+          button.classList.remove("quick-command--running");
+          button.removeAttribute("aria-busy");
+        });
     });
     return button;
   });

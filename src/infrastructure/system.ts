@@ -3,6 +3,7 @@ import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type { BackgroundOutcome } from "../application/ports";
 import type { ClaudeSession } from "../domain/claude-sessions";
 import type { EditorInvocation } from "../domain/links";
 
@@ -18,14 +19,20 @@ export function openExternalUrl(url: string): Promise<void> {
   return openUrl(url);
 }
 
-export type BackgroundResult = {
+type BackgroundResult = {
   readonly exitCode: number | null;
   readonly durationMs: number;
   readonly output: string;
+  readonly cancelled: boolean;
 };
 
-export function runBackground(command: string, cwd: string | undefined): Promise<BackgroundResult> {
-  return invoke("run_background", { command, cwd: cwd ?? null });
+export async function runBackground(id: string, command: string, cwd: string | undefined): Promise<BackgroundOutcome> {
+  const result = await invoke<BackgroundResult>("run_background", { id, command, cwd: cwd ?? null });
+  return { ...result, exitCode: result.exitCode ?? undefined };
+}
+
+export function cancelBackground(id: string): Promise<void> {
+  return invoke("cancel_background", { id });
 }
 
 export function claudeSessions(cwd: string, limit: number): Promise<readonly ClaudeSession[]> {
