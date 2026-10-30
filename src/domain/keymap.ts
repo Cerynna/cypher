@@ -38,8 +38,10 @@ const KEY_ALIASES: Readonly<Record<string, string>> = {
 const MODIFIERS = new Set(["ctrl", "control", "shift", "alt", "option", "meta", "cmd", "super"]);
 
 export const DEFAULT_BINDINGS: Readonly<Record<string, ActionId>> = {
+  "ctrl+c": "copyOrInterrupt",
   "ctrl+shift+c": "copy",
   "meta+c": "copy",
+  "ctrl+v": "paste",
   "ctrl+shift+v": "paste",
   "meta+v": "paste",
   "ctrl+shift+f": "find",

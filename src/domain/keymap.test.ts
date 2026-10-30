@@ -44,8 +44,13 @@ describe("Keymap", () => {
     expect(keymap.resolve(stroke(overrides))).toBe(action);
   });
 
-  it("laisse Ctrl+C au shell", () => {
-    expect(keymap.resolve(stroke({ key: "c", ctrlKey: true }))).toBeUndefined();
+  it("copie avec Ctrl+C et colle avec Ctrl+V, comme Windows Terminal", () => {
+    expect(keymap.resolve(stroke({ key: "c", ctrlKey: true }))).toBe("copyOrInterrupt");
+    expect(keymap.resolve(stroke({ key: "v", ctrlKey: true }))).toBe("paste");
+  });
+
+  it("laisse Ctrl+C au shell quand on le désactive dans la config", () => {
+    expect(Keymap.create({ "ctrl+c": "none" }).resolve(stroke({ key: "c", ctrlKey: true }))).toBeUndefined();
   });
 
   it("zoome avec Ctrl++ même quand Maj est nécessaire pour taper +", () => {

@@ -5,7 +5,7 @@ import "./styles.css";
 import { ClaudeResume } from "./application/claude-resume";
 import { type QuickCommandExecution, QuickCommandRunner } from "./application/quick-command-runner";
 import { WorkspaceController } from "./application/workspace-controller";
-import { ACTION_IDS, ACTION_LABELS, type ActionId, isActionId } from "./domain/actions";
+import { ACTION_IDS, ACTION_LABELS, type ActionId, HIDDEN_FROM_PALETTE, isActionId } from "./domain/actions";
 import { commandPrompt, explainPrompt, extractCommand, type ShellContext } from "./domain/ai-prompts";
 import { durationMs, formatDuration, shouldNotifyCompletion } from "./domain/command-history";
 import type { InterruptedCommand } from "./application/ports";
@@ -326,7 +326,7 @@ function openPalette(): void {
     hint: quickCommand.command,
     run: () => runQuickCommand(quickCommand),
   }));
-  const actionCommands = ACTION_IDS.filter((action) => action !== "commandPalette").map((action) => ({
+  const actionCommands = ACTION_IDS.filter((action) => !HIDDEN_FROM_PALETTE.has(action)).map((action) => ({
     label: ACTION_LABELS[action],
     hint: keymap.chordsFor(action).map(formatChord)[0] ?? "",
     run: () => runAction(action),
@@ -336,6 +336,7 @@ function openPalette(): void {
 
 const actions: Readonly<Record<ActionId, () => void>> = {
   copy: () => void controller.focused?.clipboard.copySelection().catch(reportError),
+  copyOrInterrupt: () => void controller.focused?.clipboard.copySelection().catch(reportError),
   paste: () => void controller.focused?.clipboard.pasteFromClipboard().catch(reportError),
   find: () => {
     const pane = controller.focused;

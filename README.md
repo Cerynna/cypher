@@ -42,7 +42,8 @@ Sous Wayland, WSLg retrouve l'icône d'une fenêtre via un fichier `.desktop` po
 | Redimensionner un split | glisser la séparation · double-clic = 50/50 |
 | Commande précédente / suivante | Ctrl+Shift+↑ / ↓ |
 | Copier la dernière sortie | Ctrl+Shift+O |
-| Copier / coller | Ctrl+Shift+C / Ctrl+Shift+V |
+| Copier / coller | Ctrl+C (avec une sélection, sinon interrompt) / Ctrl+V, ou Ctrl+Shift+C / Ctrl+Shift+V |
+| Clic droit | copie la sélection, sinon colle |
 | Rechercher | Ctrl+Shift+F |
 | Zoom | Ctrl+= / Ctrl+- / Ctrl+0 |
 | IA : générer une commande / expliquer l'échec | Ctrl+Shift+A / Ctrl+Shift+X |

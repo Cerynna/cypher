@@ -34,7 +34,9 @@ export class TerminalClipboard {
 
   async copySelection(): Promise<void> {
     const selection = this.terminal.getSelection();
-    if (selection) await writeText(selection);
+    if (!selection) return;
+    await writeText(selection);
+    this.terminal.clearSelection();
   }
 
   async pasteFromClipboard(): Promise<void> {

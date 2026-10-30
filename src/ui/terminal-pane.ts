@@ -7,7 +7,7 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import type { IBufferRange, IDisposable, ILink, IMarker, ITheme, Terminal as XTerm } from "@xterm/xterm";
 import { Terminal } from "@xterm/xterm";
 import type { CommandPane, FinishedCommand, Pane, PaneEvents, PaneRequest, RunningCommand } from "../application/ports";
-import type { ActionId } from "../domain/actions";
+import { type ActionId, passesThroughToShell } from "../domain/actions";
 import { type CommandBlock, CommandHistory, durationMs, formatDuration } from "../domain/command-history";
 import type { CursorStyle } from "../domain/config";
 import type { Keymap } from "../domain/keymap";
@@ -97,6 +97,7 @@ export class TerminalPane implements Pane, CommandPane {
       cursorStyle: settings.cursorStyle,
       cursorBlink: settings.cursorBlink,
       cursorWidth: 2,
+      rightClickSelectsWord: false,
     });
     const fitAddon = new FitAddon();
     const search = new SearchAddon();
@@ -258,7 +259,7 @@ export class TerminalPane implements Pane, CommandPane {
     this.terminal.attachCustomKeyEventHandler((event) => {
       if (event.type !== "keydown") return true;
       const action = this.services.keymap().resolve(event);
-      if (!action) return true;
+      if (!action || passesThroughToShell(action, this.terminal.hasSelection())) return true;
       event.preventDefault();
       this.services.onAction(action);
       return false;
@@ -277,6 +278,11 @@ export class TerminalPane implements Pane, CommandPane {
       }),
     );
     this.terminal.textarea?.addEventListener("focus", () => this.events.onFocus());
+    this.element.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      const done = this.terminal.hasSelection() ? this.clipboard.copySelection() : this.clipboard.pasteFromClipboard();
+      void done.catch(() => undefined).finally(() => this.terminal.focus());
+    });
   }
 
   private registerShellIntegration(): void {
