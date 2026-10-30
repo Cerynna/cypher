@@ -67,6 +67,7 @@
 - [x] Contre-pression : lecture du PTY suspendue au-delà de 512 Ko non rendus, reprise sous 128 Ko (`domain/flow-control.ts`, `read_gate.rs`)
 - [x] Commandes en arrière-plan : groupe de processus, arrêt au clic, arrêt à la fermeture, sortie bornée en continu
 - [x] Orchestration sortie de `main.ts` : use cases `QuickCommandRunner` et `ClaudeResume` testés avec des fakes
+- [x] `.exe` Windows avec WSL : zsh de la distribution via `wsl.exe`, chemins traduits (`\\wsl.localhost`), éditeur `--remote wsl+…`, pas de console qui clignote — *à valider sur Windows*
 - [ ] Intégration shell pour pwsh / bash (blocs, notifications, reprise Claude)
 - [x] CI GitHub Actions : tests et build front, `cargo fmt --check`, `clippy -D warnings`, tests Rust
 

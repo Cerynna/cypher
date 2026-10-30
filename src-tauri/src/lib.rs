@@ -4,11 +4,13 @@ mod claude;
 mod config;
 mod editor;
 mod executable;
+mod host;
 mod input_queue;
 mod pty;
 mod read_gate;
 mod registry;
 mod repo;
+mod wsl;
 
 use std::sync::Arc;
 
@@ -23,6 +25,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(pty::PtyState::default())
+        .manage(host::HostState::default())
         .manage(Arc::new(background::BackgroundState::default()))
         .setup(|app| {
             let watcher = config::watch(app.handle())?;
@@ -43,7 +46,8 @@ pub fn run() {
             background::run_background,
             background::cancel_background,
             claude::claude_sessions,
-            repo::repo_root
+            repo::repo_root,
+            host::host_configure
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

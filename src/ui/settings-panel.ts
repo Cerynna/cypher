@@ -79,6 +79,7 @@ const SECTIONS: readonly Section[] = [
     title: "Shell et éditeur",
     fields: [
       { kind: "text", label: "Shell (vide = automatique)", read: (c) => c.shell.program, write: (c, v) => ({ ...c, shell: { ...c.shell, program: v.trim() } }) },
+      { kind: "text", label: "WSL sous Windows (auto, off ou distribution)", read: (c) => c.shell.wsl, write: (c, v) => ({ ...c, shell: { ...c.shell, wsl: v.trim() || "auto" } }) },
       { kind: "text", label: "Arguments du shell", read: (c) => c.shell.args.join(" "), write: (c, v) => ({ ...c, shell: { ...c.shell, args: v.split(/\s+/).filter(Boolean) } }) },
       { kind: "text", label: "Commande de l'éditeur", read: (c) => c.editor.command, write: (c, v) => ({ ...c, editor: { command: v } }) },
     ],

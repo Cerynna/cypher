@@ -70,6 +70,14 @@ export async function notify(title: string, body: string): Promise<void> {
   if (granted) sendNotification({ title, body });
 }
 
+export type HostInfo = { readonly kind: "native" | "wsl"; readonly distro: string | null };
+
+export const NATIVE_HOST: HostInfo = { kind: "native", distro: null };
+
+export function configureHost(mode: string): Promise<HostInfo> {
+  return invoke("host_configure", { mode });
+}
+
 export function platformName(): string {
   const agent = navigator.userAgent;
   if (agent.includes("Windows")) return "Windows";

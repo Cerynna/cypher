@@ -23,6 +23,9 @@ import {
   askClaude,
   bindQuakeShortcut,
   cancelBackground,
+  configureHost,
+  type HostInfo,
+  NATIVE_HOST,
   claudeSessions,
   closeWindow,
   notify,
@@ -82,14 +85,37 @@ function terminalSettings(): TerminalSettings {
   };
 }
 
+let host: HostInfo = NATIVE_HOST;
+let configuredHostMode: string | undefined;
+let hostReady: Promise<void> = Promise.resolve();
+
+function applyHostMode(mode: string): Promise<void> {
+  if (mode === configuredHostMode) return hostReady;
+  configuredHostMode = mode;
+  hostReady = configureHost(mode)
+    .then((info) => {
+      host = info;
+    })
+    .catch((error: unknown) => {
+      host = NATIVE_HOST;
+      reportError(error);
+    });
+  return hostReady;
+}
+
 function shellContext(cwd: string | undefined): ShellContext {
+  if (host.kind === "wsl") return { platform: `Linux (WSL ${host.distro})`, shell: config.shell.program || "zsh", cwd };
   const shell = config.shell.program || (platformName() === "Windows" ? "PowerShell" : "zsh");
   return { platform: platformName(), shell, cwd };
 }
 
-function openFile(path: string, line: number | undefined, column: number | undefined): void {
-  const invocation = editorInvocation(config.editor.command, path, line, column);
+function openWithEditor(path: string, line: number | undefined, column: number | undefined, wslDistro?: string): void {
+  const invocation = editorInvocation(config.editor.command, path, line, column, wslDistro);
   if (invocation) openInEditor(invocation).catch(reportError);
+}
+
+function openFile(path: string, line: number | undefined, column: number | undefined): void {
+  openWithEditor(path, line, column, host.distro ?? undefined);
 }
 
 const services: PaneServices = {
@@ -224,6 +250,7 @@ function applyConfig(next: LoadedConfig): void {
   renderQuickCommands(quickCommandsHost, config.commands, { onRun: runQuickCommand, onCreate: createQuickCommand });
   void applyWindowBlur(config.terminal.blur).catch(() => undefined);
   void bindQuakeShortcut(config.quake.enabled, config.quake.shortcut).catch(reportError);
+  void applyHostMode(config.shell.wsl);
   const problems = [...next.problems, ...keymap.problems];
   if (problems.length > 0) showToast(`config.toml : ${problems.join(" · ")}`, "error");
 }
@@ -263,7 +290,7 @@ function explainLastFailure(): void {
 
 async function openConfigFile(): Promise<void> {
   if (!loaded.exists) await saveConfig(config);
-  openFile(loaded.path, undefined, undefined);
+  openWithEditor(loaded.path, undefined, undefined);
 }
 
 const claudeResume = ClaudeResume.create<TerminalPane>({
@@ -373,6 +400,7 @@ await Promise.all([
   document.fonts.load(`${fontSize.value}px 'Noto Color Emoji'`, COMMON_EMOJIS + config.commands.map((c) => c.emoji).join("")),
 ]).catch(() => undefined);
 applyConfig(loaded);
+await applyHostMode(config.shell.wsl);
 void onWindowClosing(() => controller.freeze());
 const interrupted = controller.start();
 void offerInterruptedClaudeSessions(interrupted).catch(reportError);

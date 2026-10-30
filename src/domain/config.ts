@@ -26,7 +26,7 @@ export type Config = {
     readonly blur: boolean;
     readonly scanlines: boolean;
   };
-  readonly shell: { readonly program: string; readonly args: readonly string[] };
+  readonly shell: { readonly program: string; readonly args: readonly string[]; readonly wsl: string };
   readonly editor: { readonly command: string };
   readonly notifications: { readonly longCommandSeconds: number };
   readonly keybindings: Readonly<Record<string, string>>;
@@ -48,7 +48,7 @@ export const DEFAULT_CONFIG: Config = {
     blur: false,
     scanlines: true,
   },
-  shell: { program: "", args: [] },
+  shell: { program: "", args: [], wsl: "auto" },
   editor: { command: "code -g {file}:{line}:{column}" },
   notifications: { longCommandSeconds: 10 },
   keybindings: {},
@@ -183,6 +183,7 @@ export function parseConfig(raw: unknown): ParsedConfig {
     shell: {
       program: read.string(shell, "shell.program", defaults.shell.program),
       args: read.strings(shell, "shell.args", defaults.shell.args),
+      wsl: read.string(shell, "shell.wsl", defaults.shell.wsl, (value) => /^[\w.-]+$/.test(value)),
     },
     editor: {
       command: read.string(editor, "editor.command", defaults.editor.command, (value) => value.includes("{file}")),
@@ -226,7 +227,7 @@ export function serializeConfig(config: Config): Record<string, unknown> {
       blur: config.terminal.blur,
       scanlines: config.terminal.scanlines,
     },
-    shell: { program: config.shell.program, args: [...config.shell.args] },
+    shell: { program: config.shell.program, args: [...config.shell.args], wsl: config.shell.wsl },
     editor: { command: config.editor.command },
     notifications: { long_command_seconds: config.notifications.longCommandSeconds },
     ai: { enabled: config.ai.enabled, model: config.ai.model },

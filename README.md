@@ -74,6 +74,7 @@ scanlines = true         # lignes horizontales façon écran cathodique
 [shell]
 program = ""             # vide = zsh avec la config CYPHER, sinon pwsh / powershell
 args = []
+wsl = "auto"             # Windows : auto (distribution WSL par défaut), off (pwsh) ou nom de distribution
 
 [editor]
 command = "code -g {file}:{line}:{column}"
@@ -103,6 +104,10 @@ notify = false           # notifier le résultat en mode run / tab ; toujours vr
 "alt+t" = "newTab"
 "ctrl+shift+t" = "none"
 ```
+
+## Sous Windows avec WSL
+
+Le `.exe` lance par défaut le zsh de la distribution WSL par défaut, avec la config CYPHER (`wsl.exe --cd <dossier> -- …`). Blocs de commande, nom du dépôt, liens `fichier:ligne`, reprise des sessions Claude et commandes en arrière-plan passent par WSL : les fichiers sont lus via `\\wsl.localhost\<distribution>\…` et VS Code s'ouvre en `--remote wsl+<distribution>`. La config de l'app reste côté Windows (`%USERPROFILE%\.config\cypher\config.toml`).
 
 ## Intégration shell
 

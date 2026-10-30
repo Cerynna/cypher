@@ -9,6 +9,8 @@ use std::time::Instant;
 use serde::Serialize;
 use tauri::State;
 
+use crate::host::{Host, HostState, hide_console};
+
 const MAX_OUTPUT_BYTES: usize = 64 * 1024;
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -67,8 +69,16 @@ impl TailBuffer {
     }
 }
 
-fn shell_invocation(command: &str) -> Command {
-    let mut invocation = if cfg!(windows) {
+fn shell_invocation(host: &Host, command: &str, cwd: Option<&str>) -> Command {
+    let mut invocation = if let Host::Wsl { distro, .. } = host {
+        let mut wsl = Command::new("wsl.exe");
+        wsl.args(["-d", distro]);
+        if let Some(dir) = cwd.filter(|dir| host.fs_path(dir).is_dir()) {
+            wsl.args(["--cd", dir]);
+        }
+        wsl.args(["--", "sh", "-c", command]);
+        wsl
+    } else if cfg!(windows) {
         let mut cmd = Command::new("cmd");
         cmd.args(["/C", command]);
         cmd
@@ -77,8 +87,12 @@ fn shell_invocation(command: &str) -> Command {
         sh.args(["-c", command]);
         sh
     };
+    if let (Host::Native, Some(dir)) = (host, cwd.map(Path::new).filter(|dir| dir.is_dir())) {
+        invocation.current_dir(dir);
+    }
     #[cfg(unix)]
     std::os::unix::process::CommandExt::process_group(&mut invocation, 0);
+    hide_console(&mut invocation);
     invocation
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -96,7 +110,10 @@ fn terminate_tree(pid: u32) {
         kill.args(["-TERM", "--", &format!("-{pid}")]);
         kill
     };
-    let _ = killer.stdout(Stdio::null()).stderr(Stdio::null()).status();
+    let _ = hide_console(&mut killer)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
 }
 
 fn collect(
@@ -137,14 +154,12 @@ fn wait_with_output(mut child: Child) -> std::io::Result<(Option<i32>, String)> 
 
 fn execute(
     state: &BackgroundState,
+    host: &Host,
     id: &str,
     command: &str,
     cwd: Option<&str>,
 ) -> Result<BackgroundResult, String> {
-    let mut invocation = shell_invocation(command);
-    if let Some(dir) = cwd.map(Path::new).filter(|dir| dir.is_dir()) {
-        invocation.current_dir(dir);
-    }
+    let mut invocation = shell_invocation(host, command, cwd);
     let started = Instant::now();
     let child = invocation.spawn().map_err(|e| e.to_string())?;
     state.register(id, child.id());
@@ -162,14 +177,18 @@ fn execute(
 #[tauri::command]
 pub async fn run_background(
     state: State<'_, Arc<BackgroundState>>,
+    host: State<'_, HostState>,
     id: String,
     command: String,
     cwd: Option<String>,
 ) -> Result<BackgroundResult, String> {
     let state = Arc::clone(&state);
-    tauri::async_runtime::spawn_blocking(move || execute(&state, &id, &command, cwd.as_deref()))
-        .await
-        .map_err(|e| e.to_string())?
+    let host = host.current();
+    tauri::async_runtime::spawn_blocking(move || {
+        execute(&state, &host, &id, &command, cwd.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -189,6 +208,7 @@ mod tests {
         let state = BackgroundState::default();
         let result = execute(
             &state,
+            &Host::Native,
             "a",
             "echo bonjour; sleep 0.05; echo oups >&2; exit 3",
             None,
@@ -202,7 +222,14 @@ mod tests {
     #[test]
     fn s_execute_dans_le_dossier_demande() {
         let dir = std::env::temp_dir();
-        let result = execute(&BackgroundState::default(), "b", "pwd", dir.to_str()).unwrap();
+        let result = execute(
+            &BackgroundState::default(),
+            &Host::Native,
+            "b",
+            "pwd",
+            dir.to_str(),
+        )
+        .unwrap();
         let reported = std::fs::canonicalize(result.output.trim()).unwrap();
         assert_eq!(reported, std::fs::canonicalize(&dir).unwrap());
     }
@@ -211,6 +238,7 @@ mod tests {
     fn ne_garde_que_la_fin_d_une_sortie_volumineuse() {
         let result = execute(
             &BackgroundState::default(),
+            &Host::Native,
             "c",
             "yes abcdefgh | head -c 1000000; echo FIN",
             None,
@@ -225,7 +253,15 @@ mod tests {
         let state = Arc::new(BackgroundState::default());
         let runner = {
             let state = Arc::clone(&state);
-            thread::spawn(move || execute(&state, "d", "sleep 30 & sleep 30; wait", None))
+            thread::spawn(move || {
+                execute(
+                    &state,
+                    &Host::Native,
+                    "d",
+                    "sleep 30 & sleep 30; wait",
+                    None,
+                )
+            })
         };
         thread::sleep(Duration::from_millis(200));
         let started = Instant::now();
@@ -241,7 +277,7 @@ mod tests {
         let state = Arc::new(BackgroundState::default());
         let runner = {
             let state = Arc::clone(&state);
-            thread::spawn(move || execute(&state, "e", "sleep 30", None))
+            thread::spawn(move || execute(&state, &Host::Native, "e", "sleep 30", None))
         };
         thread::sleep(Duration::from_millis(200));
         state.terminate_all();

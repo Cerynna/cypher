@@ -56,3 +56,35 @@ jobs:
       - name: Tests Rust
         working-directory: src-tauri
         run: cargo test --locked
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Installation et build front
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+
+      - name: Clippy (Windows)
+        working-directory: src-tauri
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Tests Rust (Windows)
+        working-directory: src-tauri
+        run: cargo test --locked

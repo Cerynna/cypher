@@ -23,11 +23,14 @@ export function findFileLinks(line: string): readonly FileLink[] {
 
 export type EditorInvocation = { readonly program: string; readonly args: readonly string[] };
 
+const REMOTE_CAPABLE_EDITORS = new Set(["code", "code-insiders", "codium", "cursor"]);
+
 export function editorInvocation(
   template: string,
   file: string,
   line: number | undefined,
   column: number | undefined,
+  wslDistro?: string,
 ): EditorInvocation | undefined {
   const [program, ...rawArgs] = template.trim().split(/\s+/);
   if (!program) return undefined;
@@ -37,5 +40,9 @@ export function editorInvocation(
       .replaceAll("{line}", String(line ?? 1))
       .replaceAll("{column}", String(column ?? 1)),
   );
-  return { program, args };
+  const remote =
+    wslDistro !== undefined && REMOTE_CAPABLE_EDITORS.has(program.toLowerCase()) && !args.includes("--remote")
+      ? ["--remote", `wsl+${wslDistro}`]
+      : [];
+  return { program, args: [...remote, ...args] };
 }

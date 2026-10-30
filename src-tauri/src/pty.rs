@@ -11,9 +11,11 @@ use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager, State};
 
 use crate::executable::{file_stem, find_in_path};
+use crate::host::{Host, HostState};
 use crate::input_queue::InputQueue;
 use crate::read_gate::ReadGate;
 use crate::registry::{Registry, SessionId};
+use crate::wsl;
 
 const READ_BUFFER_SIZE: usize = 8192;
 const MAX_BATCH_SIZE: usize = 256 * 1024;
@@ -71,6 +73,48 @@ fn zsh_with_cypher_config(app: &AppHandle, zsh: PathBuf) -> Result<CommandBuilde
     Ok(command)
 }
 
+const WSL_LAUNCHER: &str = r#"shell=$(command -v zsh || printf %s "$SHELL"); exec env ZDOTDIR="$1" TERM=xterm-256color COLORTERM=truecolor TERM_PROGRAM=cypher "$shell" -l"#;
+
+fn wsl_args(distro: &str, cwd: Option<&str>, zdotdir: &str) -> Vec<String> {
+    [
+        "-d",
+        distro,
+        "--cd",
+        cwd.unwrap_or("~"),
+        "--",
+        "sh",
+        "-c",
+        WSL_LAUNCHER,
+        "cypher",
+        zdotdir,
+    ]
+    .iter()
+    .map(|arg| (*arg).to_owned())
+    .collect()
+}
+
+fn wsl_shell(
+    app: &AppHandle,
+    host: &Host,
+    distro: &str,
+    cwd: Option<&str>,
+) -> Result<CommandBuilder, String> {
+    let resource = app
+        .path()
+        .resolve("shell/zsh", BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+    let zdotdir = wsl::mount_path(&resource.to_string_lossy()).ok_or_else(|| {
+        format!(
+            "config zsh inaccessible depuis WSL : {}",
+            resource.display()
+        )
+    })?;
+    let cwd = cwd.filter(|dir| host.fs_path(dir).is_dir());
+    let mut command = CommandBuilder::new("wsl.exe");
+    command.args(wsl_args(distro, cwd, &zdotdir));
+    Ok(command)
+}
+
 fn automatic_shell(app: &AppHandle) -> Result<CommandBuilder, String> {
     if let Some(zsh) = find_in_path("zsh") {
         return zsh_with_cypher_config(app, zsh);
@@ -95,9 +139,13 @@ fn overridden_shell(app: &AppHandle, shell: &ShellOverride) -> Result<CommandBui
 
 fn shell_command(
     app: &AppHandle,
+    host: &Host,
     shell: Option<&ShellOverride>,
     cwd: Option<&str>,
 ) -> Result<CommandBuilder, String> {
+    if let (None, Host::Wsl { distro, .. }) = (shell, host) {
+        return wsl_shell(app, host, distro, cwd);
+    }
     let mut command = match shell {
         Some(shell) => overridden_shell(app, shell)?,
         None => automatic_shell(app)?,
@@ -160,6 +208,7 @@ fn stream_output(
 pub fn pty_spawn(
     app: AppHandle,
     state: State<PtyState>,
+    host: State<HostState>,
     cols: u16,
     rows: u16,
     cwd: Option<String>,
@@ -170,7 +219,7 @@ pub fn pty_spawn(
     let pair = native_pty_system()
         .openpty(size(cols, rows))
         .map_err(|e| e.to_string())?;
-    let command = shell_command(&app, shell.as_ref(), cwd.as_deref())?;
+    let command = shell_command(&app, &host.current(), shell.as_ref(), cwd.as_deref())?;
     let child = pair
         .slave
         .spawn_command(command)
@@ -237,4 +286,30 @@ pub fn pty_set_paused(state: State<PtyState>, id: SessionId, paused: bool) -> Re
 pub fn pty_close(state: State<PtyState>, id: SessionId) -> Result<(), String> {
     state.0.lock().map_err(|e| e.to_string())?.remove(id);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lance_zsh_dans_wsl_avec_la_config_cypher_dans_le_dossier_courant() {
+        let args = wsl_args(
+            "Ubuntu",
+            Some("/home/jm/mon projet"),
+            "/mnt/c/Users/jm/CYPHER/shell/zsh",
+        );
+        assert_eq!(
+            &args[..5],
+            ["-d", "Ubuntu", "--cd", "/home/jm/mon projet", "--"]
+        );
+        assert_eq!(&args[5..7], ["sh", "-c"]);
+        assert!(args[7].contains("ZDOTDIR=\"$1\""));
+        assert_eq!(&args[8..], ["cypher", "/mnt/c/Users/jm/CYPHER/shell/zsh"]);
+    }
+
+    #[test]
+    fn ouvre_le_dossier_personnel_sans_dossier_courant() {
+        assert_eq!(wsl_args("Debian", None, "/mnt/c/x")[3], "~");
+    }
 }

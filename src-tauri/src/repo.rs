@@ -1,5 +1,9 @@
 use std::path::{Path, PathBuf};
 
+use tauri::State;
+
+use crate::host::HostState;
+
 pub fn find_repo_root(dir: &Path) -> Option<PathBuf> {
     dir.ancestors()
         .find(|ancestor| ancestor.join(".git").exists())
@@ -7,13 +11,13 @@ pub fn find_repo_root(dir: &Path) -> Option<PathBuf> {
 }
 
 #[tauri::command]
-pub async fn repo_root(cwd: String) -> Option<String> {
+pub async fn repo_root(host: State<'_, HostState>, cwd: String) -> Result<Option<String>, String> {
+    let host = host.current();
     tauri::async_runtime::spawn_blocking(move || {
-        find_repo_root(Path::new(&cwd)).map(|root| root.to_string_lossy().into_owned())
+        find_repo_root(&host.fs_path(&cwd)).map(|root| host.shell_path(&root))
     })
     .await
-    .ok()
-    .flatten()
+    .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

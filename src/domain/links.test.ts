@@ -33,6 +33,23 @@ describe("editorInvocation", () => {
     });
   });
 
+  it("ouvre VS Code à distance dans WSL quand le terminal tourne dans une distribution", () => {
+    expect(editorInvocation("code -g {file}:{line}:{column}", "/home/jm/a.ts", 3, 1, "Ubuntu")).toEqual({
+      program: "code",
+      args: ["--remote", "wsl+Ubuntu", "-g", "/home/jm/a.ts:3:1"],
+    });
+  });
+
+  it("ne touche pas aux éditeurs sans mode distant ni à un --remote déjà présent", () => {
+    expect(editorInvocation("vim +{line} {file}", "/a.ts", 3, 1, "Ubuntu")?.args).toEqual(["+3", "/a.ts"]);
+    expect(editorInvocation("code --remote ssh-remote+box -g {file}", "/a.ts", 1, 1, "Ubuntu")?.args).toEqual([
+      "--remote",
+      "ssh-remote+box",
+      "-g",
+      "/a.ts",
+    ]);
+  });
+
   it("refuse un modèle vide", () => {
     expect(editorInvocation("   ", "a.ts", 1, 1)).toBeUndefined();
   });

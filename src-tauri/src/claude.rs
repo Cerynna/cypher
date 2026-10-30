@@ -6,7 +6,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
+
+use crate::host::{Host, HostState};
 
 const MAX_SCANNED_LINES: usize = 400;
 const MAX_PREVIEW_CHARS: usize = 140;
@@ -93,7 +95,10 @@ pub fn list_sessions(project_dir: &Path, limit: usize) -> Vec<ClaudeSession> {
     sessions
 }
 
-fn claude_home(app: &AppHandle) -> Result<PathBuf, String> {
+fn claude_home(app: &AppHandle, host: &Host) -> Result<PathBuf, String> {
+    if let Host::Wsl { home, .. } = host {
+        return Ok(host.fs_path(&format!("{}/.claude", home.trim_end_matches('/'))));
+    }
     if let Some(dir) = env::var_os("CLAUDE_CONFIG_DIR") {
         return Ok(PathBuf::from(dir));
     }
@@ -104,10 +109,11 @@ fn claude_home(app: &AppHandle) -> Result<PathBuf, String> {
 #[tauri::command]
 pub async fn claude_sessions(
     app: AppHandle,
+    host: State<'_, HostState>,
     cwd: String,
     limit: usize,
 ) -> Result<Vec<ClaudeSession>, String> {
-    let project_dir = claude_home(&app)?
+    let project_dir = claude_home(&app, &host.current())?
         .join("projects")
         .join(project_dir_name(&cwd));
     tauri::async_runtime::spawn_blocking(move || list_sessions(&project_dir, limit))
