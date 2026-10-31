@@ -573,10 +573,12 @@ const actions: Readonly<Record<ActionId, () => void>> = {
   aiExplain: explainLastFailure,
   newQuickCommand: createQuickCommand,
   resumeClaude: () => void browseClaudeSessions().catch(reportError),
-  checkForUpdate: () =>
+  checkForUpdate: () => {
+    refocus();
     void checkForUpdate()
       .then((found) => found || showToast("CYPHER est à jour."))
-      .catch(reportError),
+      .catch(reportError);
+  },
 };
 
 function runAction(action: ActionId): void {

@@ -37,7 +37,10 @@ type Field =
 
 const themeLabel = (name: string): string => THEMES[name]?.label ?? name;
 
-type Section = { readonly title: string; readonly fields: readonly Field[] };
+const TAB_TITLES = ["Apparence", "Terminal", "Shell", "IA et Quake", "Commandes rapides"] as const;
+type TabTitle = (typeof TAB_TITLES)[number];
+
+type Section = { readonly tab: TabTitle; readonly title: string; readonly fields: readonly Field[] };
 
 const HOST_MODE_FIELD: Field = {
   kind: "text",
@@ -48,12 +51,14 @@ const HOST_MODE_FIELD: Field = {
 
 const SECTIONS: readonly Section[] = [
   {
+    tab: "Apparence",
     title: "Disposition",
     fields: [
       { kind: "select", label: "Position des onglets", options: TAB_POSITIONS, read: (c) => c.tabs.position, write: (c, v) => ({ ...c, tabs: { position: v as TabPosition } }) },
     ],
   },
   {
+    tab: "Apparence",
     title: "Police",
     fields: [
       { kind: "text", label: "Famille", read: (c) => c.font.family, write: (c, v) => ({ ...c, font: { ...c.font, family: v } }) },
@@ -62,6 +67,7 @@ const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    tab: "Apparence",
     title: "Thème",
     fields: [
       { kind: "select", label: "Thème sombre", options: THEME_NAMES, optionLabel: themeLabel, read: (c) => c.theme.dark, write: (c, v) => ({ ...c, theme: { ...c.theme, dark: v } }) },
@@ -73,6 +79,7 @@ const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    tab: "Terminal",
     title: "Terminal",
     fields: [
       { kind: "select", label: "Curseur", options: ["bar", "block", "underline"], read: (c) => c.terminal.cursorStyle, write: (c, v) => ({ ...c, terminal: { ...c.terminal, cursorStyle: v as CursorStyle } }) },
@@ -83,6 +90,7 @@ const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    tab: "Shell",
     title: "Shell et éditeur",
     fields: [
       { kind: "text", label: "Shell (vide = automatique)", read: (c) => c.shell.program, write: (c, v) => ({ ...c, shell: { ...c.shell, program: v.trim() } }) },
@@ -92,6 +100,7 @@ const SECTIONS: readonly Section[] = [
     ],
   },
   {
+    tab: "IA et Quake",
     title: "IA et mode Quake",
     fields: [
       { kind: "toggle", label: "Activer l'assistant IA", read: (c) => c.ai.enabled, write: (c, v) => ({ ...c, ai: { ...c.ai, enabled: v } }) },
@@ -178,6 +187,56 @@ function quickCommandsSection(
   return fieldset;
 }
 
+function tabbedPanels(groups: ReadonlyMap<TabTitle, readonly HTMLElement[]>): {
+  readonly bar: HTMLElement;
+  readonly panels: readonly HTMLElement[];
+} {
+  const bar = document.createElement("div");
+  bar.className = "settings__tabs";
+  bar.setAttribute("role", "tablist");
+  const tabs: HTMLButtonElement[] = [];
+  const panels: HTMLElement[] = [];
+
+  const select = (index: number) => {
+    tabs.forEach((tab, position) => {
+      const selected = position === index;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      panels[position].hidden = !selected;
+    });
+  };
+
+  for (const [title, content] of groups) {
+    const index = tabs.length;
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "settings__tab";
+    tab.textContent = title;
+    tab.setAttribute("role", "tab");
+    tab.addEventListener("click", () => select(index));
+    const panel = document.createElement("div");
+    panel.className = "settings__panel";
+    panel.setAttribute("role", "tabpanel");
+    panel.append(...content);
+    tabs.push(tab);
+    panels.push(panel);
+  }
+
+  bar.addEventListener("keydown", (event) => {
+    const offset = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (offset === 0) return;
+    event.preventDefault();
+    const current = tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true");
+    const next = (current + offset + tabs.length) % tabs.length;
+    select(next);
+    tabs[next].focus();
+  });
+
+  bar.append(...tabs);
+  select(0);
+  return { bar, panels };
+}
+
 export type SettingsActions = {
   readonly onSave: (config: Config) => Promise<void>;
   readonly onPreview: (config: Config) => void;
@@ -208,7 +267,8 @@ export function openSettings(
     actions.onPreview(draft);
   };
 
-  const sections = SECTIONS.map((section) => {
+  const groups = new Map<TabTitle, HTMLElement[]>(TAB_TITLES.map((title) => [title, []]));
+  for (const section of SECTIONS) {
     const fieldset = document.createElement("fieldset");
     const legend = document.createElement("legend");
     legend.textContent = section.title;
@@ -222,12 +282,12 @@ export function openSettings(
       row.append(name, fieldInput(field, config, update));
       fieldset.append(row);
     }
-    return fieldset;
-  });
-
-  sections.push(
-    quickCommandsSection(config.commands, (commands) => update((current) => ({ ...current, commands }))),
-  );
+    groups.get(section.tab)?.push(fieldset);
+  }
+  groups
+    .get("Commandes rapides")
+    ?.push(quickCommandsSection(config.commands, (commands) => update((current) => ({ ...current, commands }))));
+  const { bar, panels } = tabbedPanels(groups);
 
   const path = document.createElement("p");
   path.className = "settings__path";
@@ -250,6 +310,6 @@ export function openSettings(
   });
   footer.append(openFile, save);
 
-  overlay.body.append(...sections, path, footer);
-  overlay.body.querySelector<HTMLElement>("input, select")?.focus();
+  overlay.body.append(bar, ...panels, path, footer);
+  panels[0]?.querySelector<HTMLElement>("input, select")?.focus();
 }
