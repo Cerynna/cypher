@@ -91,6 +91,12 @@ export class WorkspaceView implements WorkspaceRenderer<TerminalPane> {
       if (event.key === "Enter") finish(true);
       else if (event.key === "Escape") finish(false);
     });
+    // L'input vit dans le <button> de l'onglet : sans ça, relâcher Espace « clique » le bouton,
+    // ce qui redessine les onglets et valide le renommage en cours de saisie.
+    input.addEventListener("keyup", (event) => {
+      event.stopPropagation();
+      if (event.key === " ") event.preventDefault();
+    });
     input.addEventListener("blur", () => finish(true));
     input.addEventListener("click", (event) => event.stopPropagation());
     input.focus();
