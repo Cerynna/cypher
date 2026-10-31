@@ -7,6 +7,7 @@ import { type QuickCommandExecution, QuickCommandRunner } from "./application/qu
 import { WorkspaceController } from "./application/workspace-controller";
 import { ACTION_IDS, ACTION_LABELS, type ActionId, HIDDEN_FROM_PALETTE, isActionId } from "./domain/actions";
 import { commandPrompt, explainPrompt, extractCommand, type ShellContext } from "./domain/ai-prompts";
+import { ClipboardHistory } from "./domain/clipboard-history";
 import { durationMs, formatDuration, shouldNotifyCompletion } from "./domain/command-history";
 import type { InterruptedCommand } from "./application/ports";
 import type { Config } from "./domain/config";
@@ -40,6 +41,8 @@ import {
 import { findUpdate } from "./infrastructure/updater";
 import { openAiCommand, openAiExplanation } from "./ui/ai-panel";
 import { openResumeList } from "./ui/claude-resume";
+import { onCopy, readClipboardText } from "./ui/clipboard";
+import { ClipboardPanel } from "./ui/clipboard-panel";
 import { openCommandPalette } from "./ui/command-palette";
 import { openOutputViewer } from "./ui/output-viewer";
 import { attachTooltip } from "./ui/tooltip";
@@ -142,7 +145,7 @@ const dockLayout = {
   hud: requireElement<HTMLElement>(".hud"),
   hudAnchor: requireElement<HTMLElement>(".hud__pulse"),
   body: requireElement<HTMLElement>(".frame__body"),
-  workspace: requireElement<HTMLElement>("#workspace"),
+  main: requireElement<HTMLElement>(".frame__main"),
   dock: requireElement<HTMLElement>(".dock"),
 };
 const quickCommandsHost = requireElement<HTMLElement>(".dock__commands");
@@ -178,6 +181,27 @@ const searchBar = SearchBar.attach(requireElement("#search-bar"), () => {
 });
 
 const refocus = () => controller.focused?.focus();
+
+let clipboardHistory = ClipboardHistory.create();
+const clipboardPanel = ClipboardPanel.create({
+  onPaste: (text) => void controller.focused?.clipboard.paste(text).catch(reportError),
+  onRemove: (text) => updateClipboardHistory(clipboardHistory.remove(text)),
+  onClear: () => updateClipboardHistory(clipboardHistory.clear()),
+  onClose: () => {
+    clipboardPanel.setOpen(false);
+    refocus();
+  },
+});
+dockLayout.main.append(clipboardPanel.element);
+clipboardPanel.render(clipboardHistory);
+
+function updateClipboardHistory(next: ClipboardHistory): void {
+  clipboardHistory = next;
+  clipboardPanel.render(next);
+}
+
+onCopy((text) => updateClipboardHistory(clipboardHistory.record(text, Date.now())));
+window.addEventListener("focus", () => void readClipboardText());
 
 function applyFontSize(next: FontSize): void {
   fontSize = next;
@@ -389,6 +413,10 @@ const actions: Readonly<Record<ActionId, () => void>> = {
     }),
   openConfigFile: () => void openConfigFile().catch(reportError),
   toggleFullscreen: () => void toggleFullscreen().catch(reportError),
+  toggleClipboardHistory: () => {
+    clipboardPanel.setOpen(!clipboardPanel.isOpen);
+    refocus();
+  },
   aiCommand: askForCommand,
   aiExplain: explainLastFailure,
   newQuickCommand: createQuickCommand,

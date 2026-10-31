@@ -2,6 +2,9 @@
 
 ## [Non publié]
 
+### Ajouté
+- Historique du presse-papiers dans un panneau à droite (bouton dans la barre, Ctrl+Shift+H ou la palette) : un clic colle dans le terminal actif. Il garde les 50 dernières copies faites dans CYPHER ou ailleurs, en mémoire seulement.
+
 ### Modifié
 - Les onglets n'affichent plus leur numéro.
 

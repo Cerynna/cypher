@@ -71,6 +71,7 @@ export const DEFAULT_BINDINGS: Readonly<Record<string, ActionId>> = {
   "ctrl+shift+up": "previousCommand",
   "ctrl+shift+down": "nextCommand",
   "ctrl+shift+o": "copyLastOutput",
+  "ctrl+shift+h": "toggleClipboardHistory",
   "ctrl+shift+p": "commandPalette",
   "meta+shift+p": "commandPalette",
   "f11": "toggleFullscreen",

@@ -20,6 +20,7 @@ export const ACTION_LABELS = {
   previousCommand: "Commande précédente",
   nextCommand: "Commande suivante",
   copyLastOutput: "Copier la sortie de la dernière commande",
+  toggleClipboardHistory: "Historique du presse-papiers",
   commandPalette: "Palette de commandes",
   settings: "Réglages",
   toggleFullscreen: "Plein écran",

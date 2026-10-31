@@ -435,11 +435,138 @@ body {
   flex-direction: row;
 }
 
+.frame__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
 #workspace {
   flex: 1;
   min-width: 0;
   min-height: 0;
   display: flex;
+}
+
+.clipboard-panel {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  min-height: 0;
+  border-left: 1px solid color-mix(in srgb, var(--accent-alt) 20%, transparent);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  font-family: var(--hud-font);
+}
+
+.clipboard-panel[hidden] {
+  display: none;
+}
+
+.clipboard-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.clipboard-panel__title {
+  flex: 1;
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.clipboard-panel__action {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font: 11px var(--hud-font);
+  cursor: pointer;
+}
+
+.clipboard-panel__action:hover,
+.clipboard-panel__action:focus-visible {
+  border-color: color-mix(in srgb, var(--accent-alt) 45%, transparent);
+  color: var(--accent-alt);
+}
+
+.clipboard-panel__list {
+  flex: 1;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.clipboard-panel__empty {
+  padding: 12px 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.clip {
+  position: relative;
+  margin-bottom: 6px;
+}
+
+.clip__paste {
+  display: block;
+  width: 100%;
+  padding: 6px 22px 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 15%, transparent);
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    box-shadow 120ms;
+}
+
+.clip__paste:hover,
+.clip__paste:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 30%, transparent);
+  outline: none;
+}
+
+.clip__preview {
+  margin: 0;
+  overflow: hidden;
+  font: 12px/1.35 var(--hud-font);
+  white-space: pre;
+  text-overflow: ellipsis;
+}
+
+.clip__meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.clip__remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: 14px var(--hud-font);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.clip:hover .clip__remove,
+.clip__remove:focus-visible {
+  opacity: 1;
+}
+
+.clip__remove:hover {
+  color: var(--danger);
 }
 
 .quick-command {

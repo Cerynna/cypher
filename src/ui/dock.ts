@@ -7,14 +7,14 @@ export type DockLayout = {
   readonly hud: HTMLElement;
   readonly hudAnchor: HTMLElement;
   readonly body: HTMLElement;
-  readonly workspace: HTMLElement;
+  readonly main: HTMLElement;
   readonly dock: HTMLElement;
 };
 
 export function placeDock(layout: DockLayout, position: TabPosition): void {
   layout.frame.dataset.tabs = position;
   if (position === "top") layout.hud.insertBefore(layout.dock, layout.hudAnchor);
-  else if (position === "left") layout.body.insertBefore(layout.dock, layout.workspace);
+  else if (position === "left") layout.body.insertBefore(layout.dock, layout.main);
   else layout.body.append(layout.dock);
 }
 
