@@ -1,5 +1,7 @@
 # Changelog
 
+## [Non publié]
+
 ## [0.4.2] - 2026-10-31
 
 ### Ajouté
