@@ -2,6 +2,9 @@
 
 ## [Non publié]
 
+### Modifié
+- Le numéro de version passe avant le témoin lumineux.
+
 ## [0.4.1] - 2026-10-31
 
 ### Ajouté

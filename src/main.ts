@@ -157,7 +157,7 @@ attachResizeHandles(document.body);
 const dockLayout = {
   frame: requireElement<HTMLElement>(".frame"),
   hud: requireElement<HTMLElement>(".hud"),
-  hudAnchor: requireElement<HTMLElement>(".hud__pulse"),
+  hudAnchor: requireElement<HTMLElement>(".hud__version"),
   body: requireElement<HTMLElement>(".frame__body"),
   main: requireElement<HTMLElement>(".frame__main"),
   dock: requireElement<HTMLElement>(".dock"),

@@ -357,7 +357,7 @@ body {
   flex-shrink: 0;
   width: 6px;
   height: 6px;
-  margin-left: auto;
+  margin: 0 12px 0 auto;
   background: var(--accent-alt);
   box-shadow: 0 0 8px var(--accent-alt);
   animation: pulse 1.6s ease-in-out infinite;
@@ -365,7 +365,7 @@ body {
 
 .hud__version {
   flex-shrink: 0;
-  margin: 0 12px 0 8px;
+  margin: 0 10px 0 auto;
   color: color-mix(in srgb, var(--accent) 70%, transparent);
   font: 11px var(--hud-font);
   letter-spacing: 0.08em;
@@ -374,6 +374,10 @@ body {
 
 .hud__version:empty {
   display: none;
+}
+
+.hud__version:not(:empty) + .hud__pulse {
+  margin-left: 0;
 }
 
 .hud__controls {
