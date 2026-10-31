@@ -2,6 +2,8 @@
 
 ## [Non publié]
 
+## [0.4.0] - 2026-10-31
+
 ### Ajouté
 - Panneau latéral à droite (bouton dans la barre) avec trois outils :
   - Presse-papiers (Ctrl+Shift+H) : les 50 dernières copies, faites dans CYPHER ou ailleurs, gardées en mémoire seulement ; un clic colle dans le terminal actif.
