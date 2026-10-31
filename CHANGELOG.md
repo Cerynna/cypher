@@ -2,6 +2,8 @@
 
 ## [Non publié]
 
+## [0.4.1] - 2026-10-31
+
 ### Ajouté
 - Numéro de version dans la barre du haut, après le témoin lumineux.
 
