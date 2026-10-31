@@ -98,7 +98,7 @@ export class WorkspaceView implements WorkspaceRenderer<TerminalPane> {
   }
 
   private renderTabs(workspace: Workspace, panes: ReadonlyMap<PaneId, TerminalPane>): void {
-    const tabs = workspace.tabs.map((tab, index) => {
+    const tabs = workspace.tabs.map((tab) => {
       const button = element("button", "tab");
       button.dataset.tabId = tab.id;
       button.classList.toggle("tab--active", tab.id === workspace.activeTabId);
@@ -112,7 +112,7 @@ export class WorkspaceView implements WorkspaceRenderer<TerminalPane> {
       const automatic = panes.get(tab.focusedPane)?.title ?? "shell";
       const label = element("span", "tab__label");
       label.dataset.automatic = automatic;
-      label.textContent = `${index + 1}:${tab.label ?? automatic}`;
+      label.textContent = tab.label ?? automatic;
       const close = element("span", "tab__close");
       close.textContent = "×";
       close.setAttribute("aria-label", "Fermer l'onglet");
