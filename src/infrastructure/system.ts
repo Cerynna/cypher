@@ -1,3 +1,4 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
@@ -80,6 +81,10 @@ export const NATIVE_HOST: HostInfo = { kind: "native", distro: null, configError
 
 export function configureHost(mode: string): Promise<HostInfo> {
   return invoke("host_configure", { mode });
+}
+
+export function appVersion(): Promise<string> {
+  return getVersion();
 }
 
 export function platformName(): string {

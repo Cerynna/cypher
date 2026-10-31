@@ -2,8 +2,16 @@
 
 ## [Non publié]
 
+### Ajouté
+- Numéro de version dans la barre du haut, après le témoin lumineux.
+
+### Modifié
+- Le panneau latéral se redimensionne en glissant son bord gauche (double-clic : largeur par défaut).
+
 ### Corrigé
 - La fenêtre des notes ne grandit plus quand on la déplace.
+- Les scripts du panneau Projet tiennent sur une ligne, sans dépasser du panneau.
+- Les onglets du panneau latéral restent sur une ligne.
 
 ## [0.4.0] - 2026-10-31
 

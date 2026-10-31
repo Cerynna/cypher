@@ -25,17 +25,18 @@ import { type LoadedConfig, loadConfig, saveConfig, watchConfig } from "./infras
 import { LocalSessionStore } from "./infrastructure/local-session-store";
 import {
   applyWindowBlur,
+  appVersion,
   askClaude,
   bindQuakeShortcut,
   cancelBackground,
+  claudeSessions,
+  closeWindow,
   configureHost,
   type HostInfo,
   NATIVE_HOST,
-  claudeSessions,
-  closeWindow,
   notify,
-  openExternalUrl,
   onWindowClosing,
+  openExternalUrl,
   openInEditor,
   platformName,
   runBackground,
@@ -602,5 +603,10 @@ await configureHostOnce(config.shell.wsl);
 void onWindowClosing(() => controller.freeze());
 const interrupted = controller.start();
 void offerInterruptedClaudeSessions(interrupted).catch(reportError);
+void appVersion()
+  .then((version) => {
+    requireElement<HTMLElement>(".hud__version").textContent = `v${version}`;
+  })
+  .catch(() => undefined);
 void checkForUpdate().catch(() => undefined);
 void watchConfig(() => void loadConfig().then(applyConfig).catch(reportError));

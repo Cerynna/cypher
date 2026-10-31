@@ -1,4 +1,21 @@
+import { clampSidebarWidth, SIDEBAR_WIDTH } from "../domain/sidebar-width";
 import { actionButton, element } from "./dom";
+
+const WIDTH_KEY = "cypher.sidebarWidth";
+
+function savedWidth(): number {
+  try {
+    return clampSidebarWidth(Number(localStorage.getItem(WIDTH_KEY)) || SIDEBAR_WIDTH.default, window.innerWidth);
+  } catch {
+    return SIDEBAR_WIDTH.default;
+  }
+}
+
+function persistWidth(width: number): void {
+  try {
+    localStorage.setItem(WIDTH_KEY, String(width));
+  } catch {}
+}
 
 export type SidebarTool = "clipboard" | "claude" | "project";
 
@@ -32,8 +49,12 @@ export class Sidebar {
     const actions = element("div", "sidebar__actions");
     header.append(tabs, actions, actionButton("✕", onClose, "Fermer le panneau"));
     const content = element("div", "sidebar__content");
-    root.append(header, content);
+    const handle = element("div", "sidebar__resize");
+    handle.setAttribute("aria-hidden", "true");
+    root.append(handle, header, content);
     const sidebar = new Sidebar(root, tabs, actions, content, views);
+    sidebar.setWidth(savedWidth());
+    sidebar.bindResize(handle);
     tabs.append(
       ...views.map((view) => {
         const tab = element("button", "sidebar__tab");
@@ -67,6 +88,37 @@ export class Sidebar {
     this.actions.replaceChildren(...view.actions);
     this.content.replaceChildren(view.element);
     view.onShow();
+  }
+
+  private setWidth(width: number): void {
+    this.element.style.width = `${width}px`;
+  }
+
+  private bindResize(handle: HTMLElement): void {
+    handle.addEventListener("dblclick", () => {
+      this.setWidth(SIDEBAR_WIDTH.default);
+      persistWidth(SIDEBAR_WIDTH.default);
+    });
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      handle.setPointerCapture(event.pointerId);
+      this.element.classList.add("sidebar--resizing");
+      const right = this.element.getBoundingClientRect().right;
+      let width = this.element.offsetWidth;
+      const move = (moved: PointerEvent) => {
+        width = clampSidebarWidth(right - moved.clientX, window.innerWidth);
+        this.setWidth(width);
+      };
+      const stop = () => {
+        handle.removeEventListener("pointermove", move);
+        handle.removeEventListener("pointerup", stop);
+        this.element.classList.remove("sidebar--resizing");
+        persistWidth(width);
+      };
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", stop);
+    });
   }
 
   close(): void {
