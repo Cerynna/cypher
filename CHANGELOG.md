@@ -2,6 +2,8 @@
 
 ## [Non publié]
 
+## [0.4.3] - 2026-10-31
+
 ### Ajouté
 - Un easter egg se cache derrière un double-clic sur le témoin lumineux de la barre du haut.
 
