@@ -51,11 +51,15 @@ export class WorkspaceView implements WorkspaceRenderer<TerminalPane> {
     const active = workspace.activeTab;
     if (!active) return this.panesHost.replaceChildren();
     const showFocus = active.root.kind === "split";
+    const focused = document.activeElement;
     this.panesHost.replaceChildren(this.renderNode(active.root, [], panes, active.focusedPane, showFocus));
     for (const pane of panes.values()) {
       if (!pane.element.isConnected) continue;
       pane.mount();
       pane.fit();
+    }
+    if (focused instanceof HTMLElement && focused !== document.activeElement && focused.isConnected) {
+      focused.focus({ preventScroll: true });
     }
     this.callbacks.onRendered(panes.get(active.focusedPane));
   }
