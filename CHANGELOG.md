@@ -1,9 +1,17 @@
 # Changelog
 
-## [Non publié]
+## [0.4.2] - 2026-10-31
+
+### Ajouté
+- Un clic sur le numéro de version dans la barre du haut lance la recherche de mise à jour.
 
 ### Modifié
 - Le numéro de version passe avant le témoin lumineux.
+- Les réglages sont rangés en onglets (Apparence, Terminal, Shell, IA et Quake, Commandes rapides), dans une fenêtre de hauteur fixe.
+- Barre de défilement aux couleurs de CYPHER dans les fenêtres de réglages et de dialogue.
+
+### Corrigé
+- Taper un espace en renommant un onglet ne valide plus le nom en cours de saisie.
 
 ## [0.4.1] - 2026-10-31
 
