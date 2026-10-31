@@ -122,8 +122,10 @@ export class NotesWindow {
     header.addEventListener("pointerdown", (event) => this.startDrag(event, header));
     new ResizeObserver(() => {
       if (this.element.hidden) return;
-      const { width, height } = this.element.getBoundingClientRect();
-      this.remember({ ...this.frame, width: Math.round(width), height: Math.round(height) });
+      const width = this.element.offsetWidth;
+      const height = this.element.offsetHeight;
+      if (width === this.frame.width && height === this.frame.height) return;
+      this.remember({ ...this.frame, width, height });
     }).observe(this.element);
     window.addEventListener("resize", () => {
       if (!this.element.hidden) this.place(fitFrame(this.frame, viewport()));

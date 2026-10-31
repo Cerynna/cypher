@@ -760,6 +760,7 @@ body {
 
 .notes {
   position: fixed;
+  box-sizing: border-box;
   z-index: 40;
   display: flex;
   flex-direction: column;

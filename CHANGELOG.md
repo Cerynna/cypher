@@ -2,6 +2,9 @@
 
 ## [Non publié]
 
+### Corrigé
+- La fenêtre des notes ne grandit plus quand on la déplace.
+
 ## [0.4.0] - 2026-10-31
 
 ### Ajouté
