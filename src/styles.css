@@ -354,6 +354,7 @@ body {
 }
 
 .hud__pulse {
+  position: relative;
   flex-shrink: 0;
   width: 6px;
   height: 6px;
@@ -389,6 +390,89 @@ body {
 
 .hud__version:not(:empty) + .hud__pulse {
   margin-left: 0;
+}
+
+.hud__pulse::after {
+  position: absolute;
+  inset: -7px;
+  content: "";
+}
+
+.overlay__panel--breach {
+  width: auto;
+  max-width: calc(100vw - 32px);
+}
+
+.breach {
+  display: flex;
+  gap: 18px;
+  padding: 14px;
+}
+
+.breach__board {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--accent) 12%, transparent);
+  outline: none;
+}
+
+.breach__side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 190px;
+  font-family: var(--hud-font);
+}
+
+.breach__stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.breach__label {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.breach__value {
+  color: var(--accent);
+  font-size: 18px;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.breach__preview {
+  align-self: flex-start;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.breach__scores {
+  margin: 0;
+  padding-left: 1.4em;
+  color: var(--fg);
+  font-size: 12px;
+}
+
+.breach__score--new {
+  color: var(--warning);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--warning) 60%, transparent);
+}
+
+.breach__empty {
+  color: var(--muted);
+  list-style: none;
+  margin-left: -1.4em;
+}
+
+.breach__help {
+  margin: auto 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre-line;
 }
 
 .hud__controls {

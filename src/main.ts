@@ -45,9 +45,11 @@ import {
 } from "./infrastructure/system";
 import { findUpdate } from "./infrastructure/updater";
 import { loadCommandLog, saveCommandLog } from "./infrastructure/local-command-log";
+import { loadHighScores, saveHighScores } from "./infrastructure/local-high-scores";
 import { readNotes, writeNotes } from "./infrastructure/notes-file";
 import { fileDiff, projectAt, repositoryStatus } from "./infrastructure/project";
 import { openAiCommand, openAiExplanation } from "./ui/ai-panel";
+import { openBreach } from "./ui/breach-game";
 import { openResumeList } from "./ui/claude-resume";
 import { ClaudeView } from "./ui/claude-panel";
 import { onCopy, readClipboardText } from "./ui/clipboard";
@@ -605,6 +607,10 @@ await configureHostOnce(config.shell.wsl);
 void onWindowClosing(() => controller.freeze());
 const interrupted = controller.start();
 void offerInterruptedClaudeSessions(interrupted).catch(reportError);
+requireElement<HTMLElement>(".hud__pulse").addEventListener("dblclick", (event) => {
+  event.stopPropagation();
+  openBreach({ load: loadHighScores, save: saveHighScores }, refocus);
+});
 void appVersion()
   .then((version) => {
     requireElement<HTMLElement>(".hud__version").textContent = `v${version}`;
