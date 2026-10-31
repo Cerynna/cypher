@@ -11,14 +11,15 @@ cd src-tauri && cargo test     # tests Rust
 
 ## Release
 
-La version de l'app vient de `package.json` (`tauri.conf.json` pointe dessus). Pour publier `0.2.0` :
+La version de l'app vient de `package.json` (`tauri.conf.json` pointe dessus). Les changements s'accumulent dans `CHANGELOG.md` sous `## [Non publié]`. Pour publier `0.4.0`, renommer cette section en `## [0.4.0] - AAAA-MM-JJ`, en rouvrir une vide au-dessus, puis :
 
 ```sh
-yarn version --new-version 0.2.0   # commit « chore: release v0.2.0 » + tag v0.2.0
+git commit -am "docs: changelog 0.4.0"
+yarn version --new-version 0.4.0   # commit « chore: release v0.4.0 » + tag v0.4.0
 git push --follow-tags
 ```
 
-Le tag déclenche `.github/workflows/release.yml`, qui construit en parallèle `.exe` (Windows, NSIS), `.deb` (Linux) et `.dmg` (macOS universel), puis les joint à une release GitHub **en brouillon** à publier après vérification. Les installeurs ne sont pas signés. Le workflow peut aussi être lancé à la main (« Run workflow ») pour récupérer les installeurs en artefacts sans créer de release, en choisissant la plateforme (`all`, `windows`, `linux`, `macos`) : `gh workflow run release.yml -f plateforme=windows`.
+Le tag déclenche `.github/workflows/release.yml`, qui construit en parallèle `.exe` (Windows, NSIS), `.deb` (Linux) et `.dmg` (macOS universel), puis les joint à une release GitHub **en brouillon** à publier après vérification. Le texte de la release reprend la section de la version dans `CHANGELOG.md` ; sans section, le build s'arrête. Les installeurs ne sont pas signés. Le workflow peut aussi être lancé à la main (« Run workflow ») pour récupérer les installeurs en artefacts sans créer de release, en choisissant la plateforme (`all`, `windows`, `linux`, `macos`) : `gh workflow run release.yml -f plateforme=windows`.
 
 ### Mises à jour automatiques
 
