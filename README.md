@@ -57,7 +57,9 @@ Sous Wayland, WSLg retrouve l'icône d'une fenêtre via un fichier `.desktop` po
 | Copier la dernière sortie | Ctrl+Shift+O |
 | Copier / coller | Ctrl+C (avec une sélection, sinon interrompt) / Ctrl+V, ou Ctrl+Shift+C / Ctrl+Shift+V |
 | Clic droit | copie la sélection, sinon colle |
-| Historique du presse-papiers | Ctrl+Shift+H · clic sur une entrée = coller dans le terminal actif |
+| Panneau latéral : presse-papiers / Claude / projet | Ctrl+Shift+H / Ctrl+Shift+K / Ctrl+Shift+G |
+| Historique des commandes | Ctrl+Alt+R · Entrée = taper, Maj+Entrée = exécuter |
+| Notes | Ctrl+Shift+N · Ctrl+Entrée = envoyer la ligne au terminal |
 | Rechercher | Ctrl+Shift+F |
 | Zoom | Ctrl+= / Ctrl+- / Ctrl+0 |
 | IA : générer une commande / expliquer l'échec | Ctrl+Shift+A / Ctrl+Shift+X |

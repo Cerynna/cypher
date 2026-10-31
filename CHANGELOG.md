@@ -3,10 +3,19 @@
 ## [Non publié]
 
 ### Ajouté
-- Historique du presse-papiers dans un panneau à droite (bouton dans la barre, Ctrl+Shift+H ou la palette) : un clic colle dans le terminal actif. Il garde les 50 dernières copies faites dans CYPHER ou ailleurs, en mémoire seulement.
+- Panneau latéral à droite (bouton dans la barre) avec trois outils :
+  - Presse-papiers (Ctrl+Shift+H) : les 50 dernières copies, faites dans CYPHER ou ailleurs, gardées en mémoire seulement ; un clic colle dans le terminal actif.
+  - Claude (Ctrl+Shift+K) : les sessions Claude Code ouvertes, celles qui attendent ta réponse en premier ; un clic mène à l'onglet.
+  - Projet (Ctrl+Shift+G) : branche, avance et retard, fichiers modifiés (clic = diff, ↗ = éditeur) et scripts du `package.json`, lancés avec le bon gestionnaire.
+- Scripts du projet aussi dans la palette de commandes.
+- Recherche dans l'historique des commandes de tous les onglets (Ctrl+Alt+R) : Entrée tape la commande, Maj+Entrée l'exécute, dans son dossier d'origine.
+- Notes (Ctrl+Shift+N) : fenêtre flottante déplaçable et redimensionnable, éditeur Markdown avec aperçu, enregistrée dans `~/.config/cypher/notes.md` ; Ctrl+Entrée envoie la ligne au terminal.
 
 ### Modifié
 - Les onglets n'affichent plus leur numéro.
+
+### Corrigé
+- Le titre des notifications de Claude Code (« Claude Code ») est séparé du message.
 
 ## [0.3.1] - 2026-10-31
 

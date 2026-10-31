@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::RwLock;
 
 use serde::Serialize;
@@ -33,6 +33,24 @@ impl Host {
                 wsl::from_unc(distro, path).unwrap_or_else(|| path.to_string_lossy().into_owned())
             }
         }
+    }
+
+    pub fn command(&self, program: &str, args: &[&str], cwd: &str) -> Command {
+        let mut command = match self {
+            Host::Native => {
+                let mut native = Command::new(program);
+                native.args(args).current_dir(cwd);
+                native
+            }
+            Host::Wsl { distro, .. } => {
+                let mut wsl = Command::new("wsl.exe");
+                wsl.args(["-d", distro, "--cd", cwd, "--exec", program])
+                    .args(args);
+                wsl
+            }
+        };
+        hide_console(&mut command).stdin(Stdio::null());
+        command
     }
 
     pub fn home(&self, app: &AppHandle) -> Option<String> {
@@ -156,6 +174,29 @@ mod tests {
         let unc = PathBuf::from(r"\\wsl.localhost\Ubuntu\home\jm\cypher");
         assert_eq!(ubuntu().shell_path(&unc), "/home/jm/cypher");
         assert_eq!(Host::Native.shell_path(Path::new("/srv")), "/srv");
+    }
+
+    #[test]
+    fn lance_un_programme_dans_wsl_sans_shell_intermediaire() {
+        let command = ubuntu().command("git", &["status", "--porcelain=v2"], "/home/jm/cypher");
+        let args: Vec<_> = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(command.get_program(), "wsl.exe");
+        assert_eq!(
+            args,
+            [
+                "-d",
+                "Ubuntu",
+                "--cd",
+                "/home/jm/cypher",
+                "--exec",
+                "git",
+                "status",
+                "--porcelain=v2"
+            ]
+        );
     }
 
     #[test]

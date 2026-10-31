@@ -15,6 +15,15 @@ describe("OSC 9 (iTerm2)", () => {
     });
   });
 
+  it("retrouve le titre quand xterm a retiré les sauts de ligne de la séquence", () => {
+    expect(parseOsc9("Claude Code:Claude is waiting for your input")).toEqual({
+      title: "Claude Code",
+      body: "Claude is waiting for your input",
+    });
+    expect(parseOsc9("Build fini : 3 erreurs")).toEqual({ title: undefined, body: "Build fini : 3 erreurs" });
+    expect(parseOsc9("https://ci.example.com/run/42")?.title).toBeUndefined();
+  });
+
   it("ignore les sous-commandes comme le dossier courant ou la progression", () => {
     expect(parseOsc9("9;/home/jm")).toBeUndefined();
     expect(parseOsc9("4;1;50")).toBeUndefined();

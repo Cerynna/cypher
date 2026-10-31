@@ -48,6 +48,7 @@ export type PaneServices = {
 
 const OSC_SEMANTIC_PROMPT = 133;
 const OSC_WORKING_DIRECTORY = 7;
+const FOCUS_REPORTS: ReadonlySet<string> = new Set(["\x1b[I", "\x1b[O"]);
 const OSC_ITERM_NOTIFICATION = 9;
 const OSC_KITTY_NOTIFICATION = 99;
 const OSC_DESKTOP_NOTIFICATION = 777;
@@ -72,6 +73,7 @@ export class TerminalPane implements Pane, CommandPane {
   private pty: Pty | undefined;
   private pendingInput = "";
   private attentionSignal: AttentionSignal | undefined;
+  private awaitedSignal: AttentionSignal | undefined;
   private readonly kittyNotifications = new KittyNotifications();
   private readonly flow = FlowControl.create();
   private completionWaiters: ((finished: FinishedCommand) => void)[] = [];
@@ -135,6 +137,14 @@ export class TerminalPane implements Pane, CommandPane {
 
   get attention(): AttentionSignal | undefined {
     return this.attentionSignal;
+  }
+
+  get terminalTitle(): string {
+    return this.shellTitle;
+  }
+
+  get waitingFor(): string | undefined {
+    return this.awaitedSignal?.body;
   }
 
   get title(): string {
@@ -257,9 +267,16 @@ export class TerminalPane implements Pane, CommandPane {
   }
 
   private raiseAttention(signal: AttentionSignal): void {
-    if (this.isWatched()) return;
+    this.awaitedSignal = signal;
+    if (this.isWatched()) return this.events.onChange();
     this.attentionSignal = signal;
     this.services.onAttention(this, signal);
+    this.events.onChange();
+  }
+
+  private stopAwaiting(): void {
+    if (!this.awaitedSignal) return;
+    this.awaitedSignal = undefined;
     this.events.onChange();
   }
 
@@ -293,7 +310,10 @@ export class TerminalPane implements Pane, CommandPane {
       return false;
     });
     this.disposables.push(
-      this.terminal.onData((data) => void this.pty?.write(data)),
+      this.terminal.onData((data) => {
+        void this.pty?.write(data);
+        if (!FOCUS_REPORTS.has(data)) this.stopAwaiting();
+      }),
       this.terminal.onResize((size) => void this.pty?.resize(size)),
       this.terminal.onTitleChange((title) => {
         this.shellTitle = title;

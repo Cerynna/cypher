@@ -11,6 +11,7 @@ use crate::host::Host;
 
 pub const CONFIG_CHANGED_EVENT: &str = "config-changed";
 const CONFIG_FILE_NAME: &str = "config.toml";
+const NOTES_FILE_NAME: &str = "notes.md";
 const UNC_POLL_INTERVAL: Duration = Duration::from_secs(2);
 
 #[derive(Clone, Debug, PartialEq)]
@@ -94,7 +95,9 @@ pub struct ConfigFile {
 }
 
 fn write_atomically(path: &Path, content: &str) -> std::io::Result<()> {
-    let temporary = path.with_extension("toml.tmp");
+    let mut temporary = path.as_os_str().to_owned();
+    temporary.push(".tmp");
+    let temporary = PathBuf::from(temporary);
     fs::write(&temporary, content)?;
     fs::rename(&temporary, path)
 }
@@ -113,6 +116,19 @@ pub fn config_write(state: State<'_, ConfigState>, content: String) -> Result<()
     let location = state.location()?;
     fs::create_dir_all(&location.dir).map_err(|e| e.to_string())?;
     write_atomically(&location.file(), &content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn notes_read(state: State<'_, ConfigState>) -> Result<String, String> {
+    let location = state.location()?;
+    Ok(fs::read_to_string(location.dir.join(NOTES_FILE_NAME)).unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn notes_write(state: State<'_, ConfigState>, content: String) -> Result<(), String> {
+    let location = state.location()?;
+    fs::create_dir_all(&location.dir).map_err(|e| e.to_string())?;
+    write_atomically(&location.dir.join(NOTES_FILE_NAME), &content).map_err(|e| e.to_string())
 }
 
 fn concerns_config(event: &notify::Event) -> bool {

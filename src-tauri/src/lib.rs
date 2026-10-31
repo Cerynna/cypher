@@ -6,6 +6,7 @@ mod editor;
 mod executable;
 mod host;
 mod input_queue;
+mod project;
 mod pty;
 mod read_gate;
 mod registry;
@@ -49,6 +50,11 @@ pub fn run() {
             background::cancel_background,
             claude::claude_sessions,
             repo::repo_root,
+            project::git_status,
+            project::git_diff,
+            project::project_manifest,
+            config::notes_read,
+            config::notes_write,
             host::host_configure
         ])
         .build(tauri::generate_context!())

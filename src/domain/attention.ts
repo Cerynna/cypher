@@ -13,10 +13,14 @@ function signal(title: string | undefined, body: string): AttentionSignal | unde
   return { title: cleanTitle, body: cleanBody || cleanTitle || "" };
 }
 
+const TITLE_GLUED_BY_STRIPPED_NEWLINE = /^([^:]{1,40}):(?!\/\/)(\S.*)$/s;
+
 export function parseOsc9(payload: string): AttentionSignal | undefined {
   if (SUBCOMMAND.test(payload)) return undefined;
   const lines = payload.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (lines.length > 1) return signal(lines[0].replace(/:$/, ""), lines.slice(1).join(" "));
+  const glued = TITLE_GLUED_BY_STRIPPED_NEWLINE.exec(lines[0] ?? "");
+  if (glued) return signal(glued[1], glued[2] ?? "");
   return signal(undefined, lines[0] ?? "");
 }
 

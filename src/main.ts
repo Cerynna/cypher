@@ -7,14 +7,18 @@ import { type QuickCommandExecution, QuickCommandRunner } from "./application/qu
 import { WorkspaceController } from "./application/workspace-controller";
 import { ACTION_IDS, ACTION_LABELS, type ActionId, HIDDEN_FROM_PALETTE, isActionId } from "./domain/actions";
 import { commandPrompt, explainPrompt, extractCommand, type ShellContext } from "./domain/ai-prompts";
+import { claudeDashboard } from "./domain/claude-dashboard";
 import { ClipboardHistory } from "./domain/clipboard-history";
-import { durationMs, formatDuration, shouldNotifyCompletion } from "./domain/command-history";
+import { commandIn } from "./domain/command-log";
+import { type CommandBlock, durationMs, formatDuration, shouldNotifyCompletion } from "./domain/command-history";
 import type { InterruptedCommand } from "./application/ports";
 import type { Config } from "./domain/config";
 import { FontSize } from "./domain/font-size";
 import { formatChord, Keymap } from "./domain/keymap";
 import { editorInvocation } from "./domain/links";
+import type { Project } from "./domain/project-scripts";
 import { plainText, type QuickCommand } from "./domain/quick-commands";
+import { directoryName } from "./domain/shell-integration";
 import { resolveTheme } from "./domain/themes";
 import { windowTitle } from "./domain/window-title";
 import { type LoadedConfig, loadConfig, saveConfig, watchConfig } from "./infrastructure/config-file";
@@ -39,10 +43,17 @@ import {
   toggleFullscreen,
 } from "./infrastructure/system";
 import { findUpdate } from "./infrastructure/updater";
+import { loadCommandLog, saveCommandLog } from "./infrastructure/local-command-log";
+import { readNotes, writeNotes } from "./infrastructure/notes-file";
+import { fileDiff, projectAt, repositoryStatus } from "./infrastructure/project";
 import { openAiCommand, openAiExplanation } from "./ui/ai-panel";
 import { openResumeList } from "./ui/claude-resume";
+import { ClaudeView } from "./ui/claude-panel";
 import { onCopy, readClipboardText } from "./ui/clipboard";
-import { ClipboardPanel } from "./ui/clipboard-panel";
+import { ClipboardView } from "./ui/clipboard-panel";
+import { NotesWindow } from "./ui/notes-window";
+import { ProjectView } from "./ui/project-panel";
+import { Sidebar, type SidebarTool } from "./ui/sidebar";
 import { openCommandPalette } from "./ui/command-palette";
 import { openOutputViewer } from "./ui/output-viewer";
 import { attachTooltip } from "./ui/tooltip";
@@ -130,6 +141,8 @@ const services: PaneServices = {
     showToast(`${title}\n${signal.body}`, "info", { label: "Voir", run: () => controller.focusPane(pane.id) });
   },
   onCommandFinished: (block, pane) => {
+    recordCommand(block, pane);
+    if (pane === controller.focused) void refreshProject();
     if (!shouldNotifyCompletion(block, config.notifications.longCommandSeconds, document.hasFocus())) return;
     const status = block.exitCode === 0 ? "réussie" : `échec (code ${block.exitCode})`;
     const duration = formatDuration(durationMs(block) ?? 0);
@@ -159,7 +172,11 @@ const view = WorkspaceView.create(requireElement(".dock__tabs"), requireElement(
   onColorTab: (id, color) => controller.colorTab(id, color),
   onTabEditEnd: () => controller.focused?.focus(),
   onResizeSplit: (path, ratio) => controller.resizeSplit(path, ratio),
-  onRendered: (focused) => void setWindowTitle(windowTitle(focused?.title ?? "")),
+  onRendered: (focused) => {
+    void setWindowTitle(windowTitle(focused?.title ?? ""));
+    renderClaudeSessions();
+    followFocusedProject(focused);
+  },
 });
 
 const controller = WorkspaceController.create<TerminalPane>({
@@ -182,26 +199,153 @@ const searchBar = SearchBar.attach(requireElement("#search-bar"), () => {
 
 const refocus = () => controller.focused?.focus();
 
+const pasteInTerminal = (text: string) => void controller.focused?.clipboard.paste(text).catch(reportError);
+
 let clipboardHistory = ClipboardHistory.create();
-const clipboardPanel = ClipboardPanel.create({
-  onPaste: (text) => void controller.focused?.clipboard.paste(text).catch(reportError),
+const clipboardView = ClipboardView.create({
+  onPaste: pasteInTerminal,
   onRemove: (text) => updateClipboardHistory(clipboardHistory.remove(text)),
   onClear: () => updateClipboardHistory(clipboardHistory.clear()),
-  onClose: () => {
-    clipboardPanel.setOpen(false);
-    refocus();
-  },
 });
-dockLayout.main.append(clipboardPanel.element);
-clipboardPanel.render(clipboardHistory);
+const claudeView = ClaudeView.create(
+  (paneId) => controller.focusPane(paneId),
+  () => renderClaudeSessions(),
+);
+const projectView = ProjectView.create({
+  onRefresh: () => void refreshProject(),
+  onShow: () => void refreshProject(),
+  onRunScript: (script) => runInTerminal(script.name, script.command, "run"),
+  onShowDiff: (root, file) => void showDiff(root, file.path).catch(reportError),
+  onOpenFile: (root, file) => openFile(`${root}/${file.path}`, undefined, undefined),
+});
+const sidebar = Sidebar.create([clipboardView.view, claudeView.view, projectView.view], () => {
+  sidebar.close();
+  refocus();
+});
+dockLayout.main.append(sidebar.element);
+clipboardView.render(clipboardHistory);
+
+function toggleSidebar(tool?: SidebarTool): void {
+  sidebar.toggle(tool);
+  refocus();
+}
 
 function updateClipboardHistory(next: ClipboardHistory): void {
   clipboardHistory = next;
-  clipboardPanel.render(next);
+  clipboardView.render(next);
 }
 
 onCopy((text) => updateClipboardHistory(clipboardHistory.record(text, Date.now())));
-window.addEventListener("focus", () => void readClipboardText());
+window.addEventListener("focus", () => {
+  void readClipboardText();
+  if (sidebar.showing === "project") void refreshProject();
+});
+
+function renderClaudeSessions(): void {
+  if (sidebar.showing !== "claude") return;
+  const snapshots = controller.all.map((pane) => ({
+    paneId: pane.id,
+    tabLabel: controller.tabLabelOf(pane.id) ?? (pane.cwd ? directoryName(pane.cwd) : "shell"),
+    title: pane.terminalTitle,
+    command: pane.runningCommand?.command,
+    startedAt: pane.runningCommand?.startedAt,
+    waitingFor: pane.waitingFor,
+  }));
+  claudeView.render(claudeDashboard(snapshots), Date.now());
+}
+
+setInterval(renderClaudeSessions, 15_000);
+
+let project: Project | undefined;
+let projectRequest = 0;
+let followedProject = "";
+
+function followFocusedProject(focused: TerminalPane | undefined): void {
+  const key = `${focused?.id ?? ""}\u0000${focused?.cwd ?? ""}`;
+  if (key === followedProject) return;
+  followedProject = key;
+  void refreshProject();
+}
+
+async function refreshProject(): Promise<void> {
+  const request = ++projectRequest;
+  const cwd = controller.focused?.cwd;
+  if (!cwd) {
+    project = undefined;
+    return projectView.render({ kind: "none" });
+  }
+  const withGit = sidebar.showing === "project";
+  try {
+    const [repository, found] = await Promise.all([withGit ? repositoryStatus(cwd) : undefined, projectAt(cwd)]);
+    if (request !== projectRequest) return;
+    project = found;
+    if (withGit) projectView.render({ kind: "ready", repository, project: found });
+  } catch (error) {
+    if (request === projectRequest) projectView.render({ kind: "error", message: String(error) });
+  }
+}
+
+async function showDiff(root: string, path: string): Promise<void> {
+  const diff = await fileDiff(root, path);
+  openOutputViewer(path, diff || "Aucune différence avec HEAD.", refocus);
+}
+
+function runInTerminal(name: string, command: string, mode: "run" | "type"): void {
+  const busy = controller.focused?.runningCommand !== undefined;
+  runQuickCommand({ emoji: "▶", name, command, mode: busy ? "tab" : mode, notify: false });
+}
+
+let commandLog = loadCommandLog();
+
+function recordCommand(block: CommandBlock<unknown>, pane: TerminalPane): void {
+  if (!block.command) return;
+  commandLog = commandLog.record({
+    command: block.command,
+    cwd: pane.cwd,
+    exitCode: block.exitCode,
+    durationMs: durationMs(block),
+    finishedAt: Date.now(),
+  });
+  saveCommandLog(commandLog);
+}
+
+function searchHistory(): void {
+  const currentCwd = controller.focused?.cwd;
+  const entries = commandLog.latestDistinct().map((entry) => {
+    const command = commandIn(entry, currentCwd);
+    const status = entry.exitCode === undefined ? "" : entry.exitCode === 0 ? "✓" : `✗ ${entry.exitCode}`;
+    return {
+      label: entry.command,
+      hint: [entry.cwd ? directoryName(entry.cwd) : "", status].filter(Boolean).join(" · "),
+      run: () => runInTerminal(entry.command, command, "type"),
+      runAlternate: () => runInTerminal(entry.command, command, "run"),
+    };
+  });
+  openCommandPalette(entries, refocus, {
+    title: "Historique des commandes",
+    placeholder: "Rechercher une commande…",
+    footer: "Entrée : taper dans le terminal · Maj+Entrée : exécuter",
+  });
+}
+
+const notesWindow = NotesWindow.create({
+  load: readNotes,
+  save: writeNotes,
+  onSend: pasteInTerminal,
+  onOpenUrl: (url) => void openExternalUrl(url).catch(reportError),
+  onClose: () => {
+    notesWindow.close();
+    refocus();
+  },
+  onError: reportError,
+});
+document.body.append(notesWindow.element);
+
+function toggleNotes(): void {
+  if (!notesWindow.isOpen) return void notesWindow.open();
+  notesWindow.close();
+  refocus();
+}
 
 function applyFontSize(next: FontSize): void {
   fontSize = next;
@@ -368,7 +512,12 @@ function openPalette(): void {
     hint: keymap.chordsFor(action).map(formatChord)[0] ?? "",
     run: () => runAction(action),
   }));
-  openCommandPalette([...quickCommands, ...actionCommands], refocus);
+  const scripts = (project?.scripts ?? []).map((script) => ({
+    label: `▶ ${script.name}`,
+    hint: script.command,
+    run: () => runInTerminal(script.name, script.command, "run"),
+  }));
+  openCommandPalette([...quickCommands, ...scripts, ...actionCommands], refocus);
 }
 
 const actions: Readonly<Record<ActionId, () => void>> = {
@@ -413,10 +562,12 @@ const actions: Readonly<Record<ActionId, () => void>> = {
     }),
   openConfigFile: () => void openConfigFile().catch(reportError),
   toggleFullscreen: () => void toggleFullscreen().catch(reportError),
-  toggleClipboardHistory: () => {
-    clipboardPanel.setOpen(!clipboardPanel.isOpen);
-    refocus();
-  },
+  toggleSidebar: () => toggleSidebar(),
+  toggleClipboardHistory: () => toggleSidebar("clipboard"),
+  toggleClaudeSessions: () => toggleSidebar("claude"),
+  toggleProjectPanel: () => toggleSidebar("project"),
+  searchHistory,
+  toggleNotes,
   aiCommand: askForCommand,
   aiExplain: explainLastFailure,
   newQuickCommand: createQuickCommand,
